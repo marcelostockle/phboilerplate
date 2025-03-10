@@ -1,0 +1,64 @@
+@import './base.css';
+@import './transition.css';
+
+#app {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  font-weight: normal;
+}
+
+a {
+  text-decoration: none;
+  color: var(--color-heading);
+  transition: 0.4s;
+  padding: 3px;
+}
+
+.green {
+  text-decoration: none;
+  color: hsla(160, 100%, 37%, 1);
+  transition: 0.4s;
+  padding: 3px;
+}
+
+.button {
+  cursor: pointer;
+}
+.button:hover {
+  background-color: var(--color-background-mute);
+}
+
+input {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 25px;
+  font-size: 1rem;
+  outline: none;
+  box-sizing: border-box;
+  background-color: #ffffff;
+}
+
+input::placeholder {
+  color: var(--color-subtext);
+}
+
+@media (hover: hover) {
+  a:hover {
+    background-color: hsla(160, 100%, 37%, 0.2);
+  }
+}
+
+@media (min-width: 1024px) {
+  body {
+    display: flex;
+    place-items: center;
+  }
+
+  #app {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding: 0 2rem;
+  }
+}
