@@ -78,3 +78,12 @@ firebase init functions
 ```sh
 firebase deploy --only firestore:rules
 ```
+
+### Desplegar Hosting:
+```sh
+firebase deploy --only hosting
+```
+### Desplegar Fuctions:
+```sh
+firebase deploy --only functions
+```
