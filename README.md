@@ -87,3 +87,7 @@ firebase deploy --only hosting
 ```sh
 firebase deploy --only functions
 ```
+### install component vue3 select
+```sh
+npm add vue3-select-component
+```
