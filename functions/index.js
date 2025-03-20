@@ -1,0 +1,51 @@
+/**
+ * Import function triggers from their respective submodules:
+ *
+ * const {onCall} = require("firebase-functions/v2/https");
+ * const {onDocumentWritten} = require("firebase-functions/v2/firestore");
+ *
+ * See a full list of supported triggers at https://firebase.google.com/docs/functions
+ */
+
+// const logger = require("firebase-functions/logger");
+
+// Create and deploy your first functions
+// https://firebase.google.com/docs/functions/get-started
+
+// exports.helloWorld = onRequest((request, response) => {
+//   logger.info("Hello logs!", {structuredData: true});
+//   response.send("Hello from Firebase!");
+// });
+
+const functions = require("firebase-functions");
+const cors = require("cors");
+
+const corsHandler = cors({ origin: true });
+
+exports.getFirebaseConfig = functions.
+  https.onRequest(
+    { region: 'southamerica-west1' },
+    (req, res) => {
+    corsHandler(req, res, () => {
+      try {
+        const config = {
+          apiKey: process.env.firebase_api_key,
+          authDomain: process.env.firebase_auth_domain,
+          projectId: process.env.firebase_project_id,
+          storageBucket: process.env.firebase_storage_bucket,
+          messagingSenderId: process.env.firebase_messaging_sender_id,
+          appId: process.env.firebase_app_id,
+        };
+
+        if (!config.apiKey) {
+          throw new Error("Las variables de entorno de Firebase no están configuradas correctamente");
+        }
+
+        res.json(config);
+      } catch (error) {
+        console.error("Error al obtener la configuración de Firebase:", error.message);
+        res.status(500).json({ error: error.message });
+      }
+    }
+  );
+});
