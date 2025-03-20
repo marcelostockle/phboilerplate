@@ -1,29 +1,39 @@
 import axios from "axios";
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
+
+let firebaseInstance = null;
+const cloudfunctionsDomain = "https://southamerica-west1-midominio.cloudfunctions.net";
 
 const fetchFirebaseConfig = async () => {
   try {
     const response = await axios.get(
-      "https://southamerica-west1-termolaboral.cloudfunctions.net/getFirebaseConfig"
+      `${cloudfunctionsDomain}/getFirebaseConfig`
     );
     return response.data;
   } catch (error) {
-    console.error("Error al obtener la configuración de Firebase:", error);
+    console.error("Error fetching Firebase config:", error);
     return null;
   }
 };
 
-const initFirebase = async () => {
+export const initFirebase = async () => {
+  if (firebaseInstance) return firebaseInstance; // Prevent re-initialization
+
   const config = await fetchFirebaseConfig();
   if (!config) throw new Error("Failed to fetch Firebase config");
-  
+
   const app = initializeApp(config);
   const db = getFirestore(app);
-  const auth = getAuth(app); 
+  const auth = getAuth(app);
 
-  return { app, auth, db };
+  firebaseInstance = { app, db, auth };
+  return firebaseInstance;
 };
 
-export { initFirebase };
+// Ensure Firebase is initialized before any access
+export const getFirebaseServices = async () => {
+  if (!firebaseInstance) await initFirebase();
+  return firebaseInstance;
+};
