@@ -14,7 +14,27 @@ See [Vite Configuration Reference](https://vite.dev/config/).
 
 ```sh
 npm install
+firebase login
+firebase init
 ```
+
+Initialize Firebase Functions in Firebase Console. Install and deploy getFirebaseConfig to your project with
+
+```sh
+cd functions
+npm install
+npm run build
+cd ..
+firebase deploy --only functions
+```
+
+Go to src/firebase.js and replace
+
+```
+const cloudfunctionsDomain = "https://southamerica-west1-midominio.cloudfunctions.net";
+```
+
+with your cloud functions domain.
 
 ### Compile and Hot-Reload for Development
 
