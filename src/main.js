@@ -1,15 +1,32 @@
-import './assets/main.css';
+// Estilos globales
+import './assets/main.css';            // Tus estilos principales
+import 'primeicons/primeicons.css';    // Íconos de Prime
 
-import { createApp } from 'vue'
+// Core de Vue
+import { createApp } from 'vue';
 import App from './App.vue';
 import router from './router';
-import { initFirebase } from "./firebase";
+
+// Inicialización de Firebase
+import { initFirebase } from './firebase';
+
+// Importa la configuración de PrimeVue desde el archivo separado
+import { setupPrimeVue } from './primevue-config';
 
 const startApp = async () => {
-  await initFirebase(); // Ensure Firebase is initialized before app starts
+  // Aseguramos que Firebase esté inicializado antes de montar la app
+  await initFirebase();
+
   const app = createApp(App);
+
+  // Router
   app.use(router);
-  app.mount("#app");
+
+  // Configuración de PrimeVue
+  setupPrimeVue(app);
+
+  // Montamos la aplicación en #app
+  app.mount('#app');
 };
 
 startApp();
