@@ -29,3 +29,4 @@ coverage
 
 *.tsbuildinfo
 .firebaserc
+.firebase/hosting.ZGlzdA.cache
