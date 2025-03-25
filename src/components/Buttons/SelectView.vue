@@ -36,7 +36,7 @@
   
   <script setup lang="ts">
   import { ref } from 'vue'
-  import Select from '@/components/selectButton/Select.vue' // Ajusta la ruta según tu estructura
+  import Select from '@/components/Buttons/Select.vue' // Ajusta la ruta según tu estructura
   
   const selectedItem1 = ref(null)
   const selectedItem2 = ref(null)
