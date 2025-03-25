@@ -1,15 +1,24 @@
 import { getFirebaseServices } from "./firebase";
 import { reactive, readonly } from "vue";
-import { collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, setDoc,
+  updateDoc, deleteDoc, DocumentReference } from "firebase/firestore";
 
 const state = reactive({
   data: {},
 });
 
-const fetchDocument = async (collectionName, docId) => {
+const fetchDocument = async (collectionNameOrRef, docId) => {
   const { db } = await getFirebaseServices();
   try {
-    const docRef = doc(db, collectionName, docId);
+    let docRef;
+    if (collectionNameOrRef instanceof DocumentReference) {
+      docRef = collectionNameOrRef;
+    } else if (typeof collectionNameOrRef === "string" && docId) {
+      docRef = doc(db, collectionNameOrRef, docId);
+    } else {
+      throw new Error("Invalid document reference or collection/docId pair");
+    }
+
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
       return { success: true, data: docSnap.data() };
