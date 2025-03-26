@@ -27,8 +27,9 @@ export const initFirebase = async () => {
   const app = initializeApp(config);
   const db = getFirestore(app);
   const auth = getAuth(app);
+  const storage = getStorage(app);
 
-  firebaseInstance = { app, db, auth };
+  firebaseInstance = { app, db, auth, storage };
   return firebaseInstance;
 };
 
