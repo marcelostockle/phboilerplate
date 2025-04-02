@@ -39,7 +39,7 @@ const registerUser = async (email, password) => {
     const user = userCredential.user;
 
     // Crear usuario en Firestore DB
-    dbService.createOrUpdateDocument('users', userCredential.user.uid, {
+    dbService.createOrUpdateDocument(['users', userCredential.user.uid], {
         email: user.email,
         displayName: user.displayName || "Nuevo usuario",
         createdAt: new Date(),
