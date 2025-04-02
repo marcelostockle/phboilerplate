@@ -2,6 +2,7 @@ import { getFirebaseServices } from "./firebase";
 import { reactive, readonly } from "vue";
 import { collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc,
   DocumentReference, Timestamp, GeoPoint } from "firebase/firestore";
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 
 const state = reactive({
   data: {},
@@ -97,6 +98,42 @@ const deleteDocument = async (collectionName, docId) => {
   }
 };
 
+const uploadFile = async (filePath, file) => {
+  const storage = getStorage();
+  try {
+    const fileRef = ref(storage, filePath);
+    await uploadBytes(fileRef, file);
+    return { success: true, message: "File uploaded successfully" };
+  } catch (error) {
+    console.error("File upload error:", error);
+    return { success: false, message: error.code };
+  }
+};
+
+const getFileURL = async (filePath) => {
+  const storage = getStorage();
+  try {
+    const fileRef = ref(storage, filePath);
+    const url = await getDownloadURL(fileRef);
+    return { success: true, url };
+  } catch (error) {
+    console.error("Get file URL error:", error);
+    return { success: false, message: error.code };
+  }
+};
+
+const deleteFile = async (filePath) => {
+  const storage = getStorage();
+  try {
+    const fileRef = ref(storage, filePath);
+    await deleteObject(fileRef);
+    return { success: true, message: "File deleted successfully" };
+  } catch (error) {
+    console.error("Delete file error:", error);
+    return { success: false, message: error.code };
+  }
+};
+
 export default {
   state: readonly(state),
   fetchDocument,
@@ -104,4 +141,7 @@ export default {
   createOrUpdateDocument,
   updateDocument,
   deleteDocument,
+  uploadFile,
+  getFileURL,
+  deleteFile,
 };
