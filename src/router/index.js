@@ -3,7 +3,7 @@ import HomeView from '../views/HomeView.vue'
 import LoginView from '@/views/LoginView.vue'
 import SignupView from '@/views/SignupView.vue'
 import NewPasswordView from '@/views/NewPasswordView.vue'
-
+import ChartView from '@/views/ChartView.vue'
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -26,6 +26,11 @@ const router = createRouter({
       path: '/newpassword',
       name: 'newpassword',
       component: NewPasswordView,
+    },
+    {
+      path: '/chart',
+      name: 'chart',
+      component: ChartView,
     },
     {
       path: '/about',
