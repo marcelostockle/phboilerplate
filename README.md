@@ -183,3 +183,7 @@ export function setupPrimeVue(app) {
   app.component('AutoComplete', AutoComplete);
 }
 ```
+### Installar apexCharts:
+```sh
+npm install vue3-apexcharts apexcharts --save
+```
