@@ -1,6 +1,6 @@
 import { getFirebaseServices } from "./firebase";
 import { reactive, readonly } from "vue";
-import { collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc,
+import { collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc,
   DocumentReference, Timestamp, GeoPoint } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 
@@ -62,15 +62,43 @@ const fetchCollection = async (collectionName) => {
   }
 };
 
-const createOrUpdateDocument = async (collectionName, docId, data) => {
+const createOrUpdateDocument = async (pathArray, data) => {
+  // pathArray:
+  // For top-level collection: ['collectionName', 'docId']
+  // For subcollection: ['parentCollection', 'parentDocId', 'subcollection', 'docId']
+  // For nested subcollections: ['col1', 'doc1', 'col2', 'doc2', 'col3', 'doc3']
   const { db } = await getFirebaseServices();
+  
   try {
-    const docRef = doc(db, collectionName, docId);
-    await setDoc(docRef, data, { merge: true });
-    return { success: true, message: "Document saved successfully" };
+    let docRef;
+    
+    // If path ends with collection (odd length), use addDoc for auto-ID
+    if (pathArray.length % 2 === 1) {
+      const colRef = collection(db, ...pathArray);
+      const result = await addDoc(colRef, data);
+      return { 
+        success: true, 
+        message: "Document created with auto-generated ID",
+        id: result.id 
+      };
+    } 
+    // If path ends with document ID (even length), use setDoc
+    else {
+      docRef = doc(db, ...pathArray);
+      await setDoc(docRef, data, { merge: true });
+      return { 
+        success: true, 
+        message: "Document created/updated successfully",
+        id: pathArray[pathArray.length - 1] 
+      };
+    }
   } catch (error) {
-    console.error("Create/Update error:", error);
-    return { success: false, message: error.code };
+    console.error("Firestore operation error:", error);
+    return { 
+      success: false, 
+      message: error.message,
+      code: error.code 
+    };
   }
 };
 
