@@ -4,7 +4,7 @@ import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
 let firebaseInstance = null;
-const cloudfunctionsDomain = "https://southamerica-west1-midominio.cloudfunctions.net";
+const cloudfunctionsDomain = "https://southamerica-west1-ekdromoi-nuxt.cloudfunctions.net";
 
 const fetchFirebaseConfig = async () => {
   try {
