@@ -49,10 +49,10 @@ const fetchDocument = async (collectionNameOrRef, docId) => {
   }
 };
 
-const fetchCollection = async (collectionName) => {
+const fetchCollection = async (collectionPath) => {
   const { db } = await getFirebaseServices();
   try {
-    const colRef = collection(db, collectionName);
+    const colRef = collection(db, ...collectionPath.replace(/^\/+|\/+$/g, '').split('/'));
     const colSnap = await getDocs(colRef);
     const documents = colSnap.docs.map(doc => ({ id: doc.id, ...resolveFirestoreTypes(doc.data()) }));
     return { success: true, data: documents };
@@ -62,10 +62,10 @@ const fetchCollection = async (collectionName) => {
   }
 };
 
-async function queryCollection(collectionName, filters = [], options = {}) {
+async function queryCollection(collectionPath, filters = [], options = {}) {
   const { db } = await getFirebaseServices();
   try {
-    let q = collection(db, collectionName);
+    let q = collection(db, ...collectionPath.replace(/^\/+|\/+$/g, '').split('/'));
 
     // Filters (AND logic only)
     filters.forEach(({ field, operator, value }) => {
