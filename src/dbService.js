@@ -96,7 +96,6 @@ async function queryCollection(collectionPath, filters = [], options = {}) {
   }
 }
 
-
 const createOrUpdateDocument = async (pathArray, data) => {
   // pathArray:
   // For top-level collection: ['collectionName', 'docId']
@@ -106,10 +105,10 @@ const createOrUpdateDocument = async (pathArray, data) => {
   
   try {
     let docRef;
-    
+    const isStringArgs = typeof pathArray === 'string';
     // If path ends with collection (odd length), use addDoc for auto-ID
-    if (pathArray.length % 2 === 1) {
-      const colRef = collection(db, ...pathArray);
+    if (isStringArgs || pathArray.length % 2 === 1) {
+      const colRef = isStringArgs ? collection(db, pathArray) : collection(db, ...pathArray);
       const result = await addDoc(colRef, data);
       return { 
         success: true, 
