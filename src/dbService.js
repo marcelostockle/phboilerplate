@@ -1,7 +1,7 @@
 import { getFirebaseServices } from "./firebase";
 import { reactive, readonly } from "vue";
 import { collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc,
-  DocumentReference, Timestamp, GeoPoint } from "firebase/firestore";
+  query, where, orderBy, limit, startAfter, DocumentReference, Timestamp, GeoPoint } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 
 const state = reactive({
@@ -39,7 +39,7 @@ const fetchDocument = async (collectionNameOrRef, docId) => {
 
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
-      return { success: true, data: resolveFirestoreTypes(docSnap.data()) };
+      return { success: true, data: { id: docSnap.id, ...resolveFirestoreTypes(docSnap.data()) } };
     } else {
       return { success: false, message: "Document not found" };
     }
@@ -49,10 +49,10 @@ const fetchDocument = async (collectionNameOrRef, docId) => {
   }
 };
 
-const fetchCollection = async (collectionName) => {
+const fetchCollection = async (collectionPath) => {
   const { db } = await getFirebaseServices();
   try {
-    const colRef = collection(db, collectionName);
+    const colRef = collection(db, ...collectionPath.replace(/^\/+|\/+$/g, '').split('/'));
     const colSnap = await getDocs(colRef);
     const documents = colSnap.docs.map(doc => ({ id: doc.id, ...resolveFirestoreTypes(doc.data()) }));
     return { success: true, data: documents };
@@ -61,6 +61,40 @@ const fetchCollection = async (collectionName) => {
     return { success: false, message: error.code };
   }
 };
+
+async function queryCollection(collectionPath, filters = [], options = {}) {
+  const { db } = await getFirebaseServices();
+  try {
+    let q = collection(db, ...collectionPath.replace(/^\/+|\/+$/g, '').split('/'));
+
+    // Filters (AND logic only)
+    filters.forEach(({ field, operator, value }) => {
+      q = query(q, where(field, operator, value));
+    });
+
+    // Sorting
+    if (options.orderBy) {
+      const { field, direction = "asc" } = options.orderBy;
+      q = query(q, orderBy(field, direction));
+    }
+
+    // Pagination
+    if (options.limit) {
+      q = query(q, limit(options.limit));
+    }
+    if (options.startAfter) {
+      q = query(q, startAfter(options.startAfter));
+    }
+
+    // Execute query
+    const snapshot = await getDocs(q);
+    const documents = snapshot.docs.map(doc => ({ id: doc.id, ...resolveFirestoreTypes(doc.data()) }));
+    return { success: true, data: documents };
+  } catch (error) {
+    console.error("Error querying collection:", error);
+    return { success: false, message: error.code };
+  }
+}
 
 const createOrUpdateDocument = async (pathArray, data) => {
   // pathArray:
@@ -71,10 +105,10 @@ const createOrUpdateDocument = async (pathArray, data) => {
   
   try {
     let docRef;
-    
+    const isStringArgs = typeof pathArray === 'string';
     // If path ends with collection (odd length), use addDoc for auto-ID
-    if (pathArray.length % 2 === 1) {
-      const colRef = collection(db, ...pathArray);
+    if (isStringArgs || pathArray.length % 2 === 1) {
+      const colRef = isStringArgs ? collection(db, pathArray) : collection(db, ...pathArray);
       const result = await addDoc(colRef, data);
       return { 
         success: true, 
@@ -166,6 +200,7 @@ export default {
   state: readonly(state),
   fetchDocument,
   fetchCollection,
+  queryCollection,
   createOrUpdateDocument,
   updateDocument,
   deleteDocument,

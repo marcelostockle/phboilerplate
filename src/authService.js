@@ -17,13 +17,14 @@ const state = reactive({
 const initAuthListener = async () => {
   const { auth } = await getFirebaseServices();
   onAuthStateChanged(auth, async (user) => {
-    state.user = user;
     state.isLoggedIn = !!user;
-    if (state.isLoggedIn) {
-      const res = await dbService.fetchDocument('users', state.user.uid);
+    if (user) {
+      const res = await dbService.fetchDocument('users', user.uid);
       if (res.success) {
         state.user = res.data;
       }
+    } else {
+      state.user = null;
     }
   });
 };
