@@ -4,9 +4,7 @@ const cors = require("cors");
 const corsHandler = cors({ origin: true });
 
 exports.getFirebaseConfig = functions.
-  https.onRequest(
-    { region: 'southamerica-west1' },
-    (req, res) => {
+  https.onRequest({ region: 'southamerica-west1' },(req, res) => {
     corsHandler(req, res, () => {
       try {
         const config = {
@@ -30,3 +28,5 @@ exports.getFirebaseConfig = functions.
     }
   );
 });
+const { callLLM } = require('./llm-function/callLLM');
+exports.callLLM = callLLM;
