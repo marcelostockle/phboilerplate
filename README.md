@@ -187,3 +187,23 @@ export function setupPrimeVue(app) {
 ```sh
 npm install vue3-apexcharts apexcharts --save
 ```
+### Installando Taiwing con primevue css
+```sh
+npm install -D tailwindcss postcss autoprefixer
+```
+#### Se configura tailwind.config.js
+```sh
+// tailwind.config.js
+export default {
+  content: [
+    "./index.html",
+    "./src/**/*.{vue,js,ts,jsx,tsx}",
+    "./node_modules/@primevue/**/*.{js,vue}", // Añadir PrimeVue
+    "./node_modules/@primeuix/**/*.{js,vue}", // Añadir PrimeUIX para temas como Aura
+  ],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+}
+```
