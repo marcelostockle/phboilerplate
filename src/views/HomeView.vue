@@ -50,6 +50,11 @@ const menuItems = ref([
     label: 'About',
     icon: 'pi pi-info-circle',
     command: () => router.push('/about')
+  },
+  {
+    label: 'Profile',
+    icon: 'pi pi-user',
+    command: () => router.push('/profile')
   }
 ])
 </script>
