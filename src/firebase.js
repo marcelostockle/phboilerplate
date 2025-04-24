@@ -2,6 +2,7 @@ import axios from "axios";
 import { initializeApp, getApps } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
+import { getStorage } from "firebase/storage";
 
 let firebaseInstance = null;
 const cloudfunctionsDomain = "https://southamerica-west1-ekdromoi-nuxt.cloudfunctions.net";
