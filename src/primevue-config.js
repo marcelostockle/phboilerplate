@@ -7,7 +7,8 @@ import Dropdown from 'primevue/dropdown';
 import MultiSelect from 'primevue/multiselect';
 import AutoComplete from 'primevue/autocomplete';
 import Button from 'primevue/button'; // Agregado para los botones
-
+import ToastService from 'primevue/toastservice';
+import Toast from 'primevue/toast';
 export function setupPrimeVue(app) {
   app.use(PrimeVue, {
     theme: {
@@ -26,4 +27,5 @@ export function setupPrimeVue(app) {
   //app.component('MultiSelect', MultiSelect);
   //app.component('AutoComplete', AutoComplete);
   //app.component('Button', Button);
+  //app.component('Toast', Toast);
 }
