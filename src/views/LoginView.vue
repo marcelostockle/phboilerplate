@@ -41,7 +41,7 @@ export default {
     <!-- Form -->
     <form @submit.prevent="submitForm" class="form">
       <div class="form-group">
-        <input type="email" id="email" v-model="email" placeholder="Correo Electrónico" required />
+        <input type="email" id="email" v-model="email" placeholder="Correo Electrónico" required class="wide"/>
         <PasswordField v-model="pw" placeholder="Contraseña" style="margin-top:10px;"/>
       </div>
       <ButtonLarge type="submit">Iniciar Sesión</ButtonLarge>
@@ -91,5 +91,8 @@ export default {
   flex-direction: column;
   align-items: center;
   gap: 10px;
+}
+.wide {
+  width: 100%;
 }
 </style>

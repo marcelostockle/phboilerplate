@@ -37,7 +37,7 @@
     <!-- Form -->
     <form @submit.prevent="submitForm" class="form">
       <div class="form-group">
-        <input type="email" id="email" v-model="email" placeholder="Correo Electrónico" required />
+        <input type="email" id="email" v-model="email" placeholder="Correo Electrónico" required class="wide"/>
       </div>
       <ButtonLarge type="submit">Enviar solicitud</ButtonLarge>
     </form>
@@ -72,5 +72,8 @@
 .message {
   margin-top: 20px;
   font-size: 1rem;
+}
+.wide {
+  width: 100%;
 }
 </style>

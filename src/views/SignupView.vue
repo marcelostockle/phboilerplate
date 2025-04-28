@@ -45,7 +45,7 @@
     <!-- Form -->
     <form @submit.prevent="submitForm" class="form">
       <div class="form-group">
-        <input type="email" id="email" v-model="email" placeholder="Correo Electrónico" required />
+        <input type="email" id="email" v-model="email" placeholder="Correo Electrónico" required class="wide"/>
         <PasswordField v-model="pw" placeholder="Contraseña" style="margin-top:10px;"/>
         <PasswordField v-model="confirmPw" placeholder="Confirme su contraseña" style="margin-top:10px;"/>
       </div>
@@ -82,5 +82,8 @@
 .message {
   margin-top: 20px;
   font-size: 1rem;
+}
+.wide {
+  width: 100%;
 }
 </style>
