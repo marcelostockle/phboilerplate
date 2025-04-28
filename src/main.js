@@ -1,6 +1,7 @@
 // Estilos globales
 import './assets/main.css';            // Tus estilos principales
 import 'primeicons/primeicons.css';    // Íconos de Prime
+import ToastService from 'primevue/toastservice'; // <- Fíjate en esto
 
 // Core de Vue
 import { createApp } from 'vue';
@@ -22,6 +23,7 @@ const startApp = async () => {
   // Router
   app.use(router);
 
+  app.use(ToastService);
   // Configuración de PrimeVue
   setupPrimeVue(app);
 
