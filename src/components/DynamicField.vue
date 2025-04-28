@@ -116,6 +116,13 @@ export default {
 </template>
 
 <style>
+.input-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  margin: 8px 0;
+  align-items: center;
+}
 .flex-end {
   display: flex;
   flex-direction: row;
