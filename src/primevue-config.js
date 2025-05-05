@@ -16,7 +16,10 @@ export function setupPrimeVue(app) {
       options: {
         prefix: 'p',
         darkModeSelector: false,
-        cssLayer: true
+        cssLayer: {
+          name: 'primevue',
+          order: 'theme, base, primevue'
+        }
       }
     }
   });
