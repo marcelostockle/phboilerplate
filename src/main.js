@@ -2,6 +2,7 @@
 import './assets/main.css';            // Tus estilos principales
 import 'primeicons/primeicons.css';    // Íconos de Prime
 import ToastService from 'primevue/toastservice'; // <- Fíjate en esto
+import './assets/tailwind.css';
 
 // Core de Vue
 import { createApp } from 'vue';
