@@ -1,8 +1,8 @@
-// Estilos globales
+// Esti;los globales
 import './assets/main.css';            // Tus estilos principales
 import 'primeicons/primeicons.css';    // Íconos de Prime
+import "@/assets/tailwind.css"; // Tailwind CSS
 import ToastService from 'primevue/toastservice'; // <- Fíjate en esto
-import './assets/tailwind.css';
 
 // Core de Vue
 import { createApp } from 'vue';

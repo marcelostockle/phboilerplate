@@ -6,6 +6,9 @@
       </div>
     </div>
   </div>
+  <div class="bg-white text-black p-4">
+    ¡Tailwind funciona!
+  </div>
 </template>
 
 <script setup>
