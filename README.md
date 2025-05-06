@@ -53,7 +53,7 @@ npm run build
 ```sh
 npm run lint
 ```
-### PWA 
+## PWA 
 ```sh
 npm install vite-plugin-pwa --save-dev
 ```
@@ -91,7 +91,7 @@ export default defineConfig({
   ]
 })
 ```
-### Instalación y Configuración de Firebase
+## Instalación y Configuración de Firebase
 #### 1. Crear un Proyecto en Firebase
  Ingresa a la Consola de Firebase y crea un nuevo proyecto.
  Una vez creado el proyecto, agrega una aplicación web para obtener la configuración (los parámetros como apiKey, authDomain, projectId, etc.).
@@ -130,7 +130,7 @@ En el menú de navegación, selecciona Cloud Functions. Aquí verás la lista de
 
 Ten en cuenta que, al modificar las variables de entorno directamente desde la consola, deberás asegurarte de que dichos cambios se reflejen en tu flujo de despliegue y en la documentación del proyecto, para mantener la coherencia con los valores utilizados en desarrollo.
 
-### configura las reglas de acceso en firestore.rules
+## configura las reglas de acceso en firestore.rules
 ### Para actualizar y desplegar las reglas de acceso a Firestore, utiliza el siguiente comando:
 
 ```sh
@@ -138,14 +138,17 @@ firebase deploy --only firestore:rules
 ```
 
 ### Desplegar Hosting:
+
 ```sh
 firebase deploy --only hosting
 ```
 ### Desplegar Fuctions:
+
 ```sh
 firebase deploy --only functions
 ```
 ### install component vue3 select
+
 ```sh
 npm add vue3-select-component
 ```
@@ -206,4 +209,59 @@ export default {
   },
   plugins: [],
 }
+```
+## TaildWind CSS
+#### 1. Instalar dependencias necesarias:
+```sh
+npm install tailwindcss@^3 autoprefixer postcss postcss-import tailwindcss-primeui
+```
+<blockquote>
+Asegúrate de tener Tailwind v3 y NO Tailwind v4, porque tailwindcss-primeui no es compatible con Tailwind 4 aún.
+</blockquote>
+
+#### 2. Crea tailwind.config.js y postcss.config.js:
+```sh
+npx tailwindcss init -p
+```
+#### 3. Configurar tailwind.config.js
+```sh
+// tailwind.config.js
+import primeui from 'tailwindcss-primeui';
+
+export default {
+  content: [
+    './index.html',
+    './src/**/*.{vue,js,ts,jsx,tsx}',
+    './node_modules/primevue/**/*.{js,vue}'
+  ],
+  darkMode: ['class'], // o 'media' según tu preferencia
+  theme: {
+    extend: {},
+  },
+  plugins: [primeui],
+}
+
+```
+#### 4. Crear y usar postcss.config.js
+```sh
+// postcss.config.cjs
+module.exports = {
+  plugins: {
+    'postcss-import': {},
+    tailwindcss: {},
+    autoprefixer: {},
+  }
+};
+```
+<blockquote>
+En caso de error<br>
+Renombra tu archivo postcss.config.js a postcss.config.cjs.
+Esto le indica a Node que debe interpretar ese archivo como CommonJS, lo cual es lo esperado por PostCSS.
+</blockquote>
+
+#### 5. CSS principal (src/assets/tailwind.css)
+```sh
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 ```

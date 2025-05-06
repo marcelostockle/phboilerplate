@@ -14,7 +14,7 @@
         <!-- DERECHA: Avatar y nombre de usuario -->
         <template #end>
           <div class="row-flex" @click="toggleUserMenu">
-            <Avatar :image="user.avatar" shape="circle" size="small" />
+            <Avatar :image="user.avatar" class="mr-2" shape="circle" size="small" />
             <h3 class="text-sm font-semibold">{{ user.displayName }}</h3>
           </div>
         </template>
