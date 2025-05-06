@@ -18,14 +18,14 @@ export default {
     return {
       schema: [],
       schemaName: 'Objeto',
-      formData: {},
+      formData: {}, // Create editable copy
       toast: useToast(),
     };
   },
   computed: {
     internalDoc: {
       get() { return this.document; },
-      set(val) { this.$emit('update:document', val); }
+      set(val) { console.log(val); this.$emit('update:document', val); }
     },
     internalVisible: {
       get() { return this.visible; },
@@ -39,7 +39,7 @@ export default {
         if (newDoc) {
           this.formData = JSON.parse(JSON.stringify(newDoc)); // Deep copy
         } else {
-          console.warn('document es undefined');
+          console.warn('document is undefined');
           this.formData = {};
         }
       }
@@ -59,12 +59,10 @@ export default {
   },
   methods: {
     async submitEdit() {
-      console.log('submitEdit ejecutado', this.formData);
       try {
         const res = await dbService.createOrUpdateDocument(this.pathArray, this.formData);
-        console.log('Respuesta del servidor:', res);
         if (res.success) {
-          this.internalDoc = res.data;
+          this.internalDoc = this.formData;
           this.internalVisible = false;
           this.toast.add({ severity: 'success', summary: 'Éxito', detail: 'Documento guardado correctamente.', life: 3000 });
         } else {

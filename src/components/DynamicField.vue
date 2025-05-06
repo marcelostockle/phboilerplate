@@ -23,7 +23,7 @@ export default {
     Button,
     Fieldset,
     IftaLabel,
-    DynamicField: () => import('./DynamicField.vue') // recursive
+    DynamicField: () => import('./DynamicField.vue') // recursive self-import
   },
   computed: {
     isInputRow() {
@@ -32,7 +32,7 @@ export default {
     },
     isFieldEditable() {
       return this.field.editable !== false && this.editable;
-    }
+    },
   },
   methods: {
     headline(ind) {
@@ -40,10 +40,10 @@ export default {
         const val = this.field.children.find(item => item.display === 'headline');
         return val ? this.modelValue[this.field.key][ind][val.key] : 'Objeto';
       }
-      return this.modelValue[this.field.key];
+      return this.modelValue[this.field.key][ind];
     },
     addItem() {
-      this.modelValue[this.field.key] ||= [];
+      this.modelValue[this.field.key] ||= []; // Initialize if undefined
       this.modelValue[this.field.key].push({});
     },
     removeItem(index) {
@@ -51,7 +51,7 @@ export default {
     },
     hasNonEditableChild() {
       return this.field.children?.some(child => child.editable === false);
-    }
+    },
   }
 }
 </script>
@@ -170,10 +170,11 @@ export default {
 <style scoped>
 .input-row {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  justify-content: space-between;
   margin: 8px 0;
+  align-items: center;
 }
-
 .flex-end {
   display: flex;
   flex-direction: row;
