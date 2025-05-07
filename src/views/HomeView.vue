@@ -1,13 +1,10 @@
 <template>
-  <div class="min-h-screen bg-gray-100 flex items-center justify-center">
+  <div class="min-h-screen flex items-center justify-center">
     <div class="w-full max-w-4xl">
       <div class="card shadow-md rounded-2xl p-4 bg-white">
         <Menubar :model="menuItems" class="rounded-md text-black" />
       </div>
     </div>
-  </div>
-  <div class="bg-white text-black p-4">
-    ¡Tailwind funciona!
   </div>
 </template>
 

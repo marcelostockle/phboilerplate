@@ -1,45 +1,55 @@
 <template>
-    <div class="layout">
-        <header class="topbar">
-            <SidebarMenu />
-        </header>
+    <div class="default-layout flex flex-col h-screen">
+      <!-- Barra superior fija -->
+      <header class="topbar fixed inset-x-0 top-0 z-50">
+        <SidebarMenu />
+      </header>
+  
+      <!-- Contenedor principal centrado -->
+      <main class="container">
+        <section class="content">
+          <router-view />
+        </section>
+      </main>
     </div>
-    <div class="container">
-        <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="125" height="125" />
-
-        <div class="wrapper">
-            <HelloWorld msg="You did it!" />
-
-            <nav>
-                <RouterLink to="/">Home</RouterLink>
-                <RouterLink to="/about">About</RouterLink>
-            </nav>
-        </div>
-        <main class="content">
-            <router-view />
-        </main>
-    </div>
-</template>
-
-<script setup>
-import SidebarMenu from '@/components/SidebarMenu.vue'
-import HelloWorld from '@/components/HelloWorld.vue'
-import { RouterLink, RouterView } from 'vue-router'
-</script>
-
-<style scoped>
-.layout {
+  </template>
+  
+  <script setup>
+  import SidebarMenu from '@/components/SidebarMenu.vue'
+  </script>
+  
+  <style scoped>
+  .default-layout {
     display: flex;
     flex-direction: column;
-    max-height: 100%;
-}
-/* Aquí el cambio importante */
-.container {
-  display: flex;
-  flex-direction: row;
-  width: 100vw;        /* Ocupa 100% del ancho visible de la pantalla */
-  margin: 0;           /* Asegúrate de que no tenga márgenes que lo centren */
-  padding: 0;          /* Elimina posibles rellenos */
-  box-sizing: border-box; /* Incluye padding y border dentro del ancho */
-}
-</style>
+    height: 100vh;
+  }
+  
+  .topbar {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 1000;
+  }
+  
+  .container {
+    /* Deja espacio para la barra fija */
+    margin-top: 4rem;
+    /* Ocupa todo el espacio restante y centra contenido */
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100vw;
+    box-sizing: border-box;
+  }
+  
+  .content {
+    /* Limita ancho máximo y centra internamente */
+    width: 100%;
+    max-width: 800px;
+    padding: 1rem;
+    box-sizing: border-box;
+  }
+  </style>
+  
