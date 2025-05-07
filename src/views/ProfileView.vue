@@ -1,245 +1,144 @@
 <template>
-  <div class="profile-screen flex items-center justify-center min-h-screen bg-gradient-to-tr from-pink-400 to-pink-300 p-6">
+  <div class="min-h-screen flex items-center justify-center p-6">
     <Toast />
 
-    <div class="profile-card animate-fade-in relative">
-      
+    <div class="bg-white rounded-2xl p-8 max-w-lg w-full shadow-lg relative animate-fade-in">
       <!-- Avatar -->
-      <div class="avatar-container relative">
+      <div class="relative flex justify-center mb-6">
         <transition name="fade">
-          <Avatar
-            v-if="editableUser.avatar"
-            :image="editableUser.avatar"
-            shape="circle"
-            class="avatar-custom border-4 border-white shadow-lg"
-          />
-          <Avatar
-            v-else
-            icon="pi pi-user"
-            shape="circle"
-            class="avatar-custom border-4 border-white shadow-lg text-gray-400 bg-gray-100"
-          />
+          <!-- contenedor circular adaptable -->
+          <div v-if="user.avatar" class="w-36 aspect-square overflow-hidden rounded-full border-4 border-white shadow-lg">
+            <img
+              :src="user.avatar"
+              alt="Avatar usuario"
+              class="w-full h-full object-cover"
+            />
+          </div>
+          <!-- placeholder icon dentro del mismo contenedor -->
+          <div v-else class="w-36 aspect-square flex items-center justify-center rounded-full border-4 border-white shadow-lg bg-gray-100">
+            <i class="pi pi-user text-6xl text-gray-400"></i>
+          </div>
         </transition>
-
         <!-- Botón flotante para cambiar foto -->
-        <div class="camera-button absolute bottom-0 right-0">
-          <FileUpload
-            mode="basic"
-            name="avatar"
-            accept="image/*"
-            customUpload
-            :auto="true"
-            chooseLabel=""
-            class="p-button-rounded p-button-primary p-button-sm p-2"
-            @uploader="handleImageUpload"
-            :chooseIcon="'pi pi-camera'"
-          />
-        </div>
+        <FileUpload
+          mode="basic"
+          name="avatar"
+          accept="image/*"
+          customUpload
+          :auto="true"
+          chooseLabel="Cambiar"
+          class="absolute bottom-0 right-0 bg-sky-400 text-gray-200 rounded-full p-2 shadow hover:bg-sky-200 hover:text-gray-500 transition"
+          @uploader="handleImageUpload"
+          chooseIcon="pi pi-camera"
+        />
       </div>
 
       <!-- Formulario -->
-      <form class="form" @submit.prevent="updateProfile">
-        <div class="form-group">
-          <label for="displayName" class="label">Nombre</label>
-          <InputText 
+      <form @submit.prevent="updateProfile" class="space-y-4">
+        <div>
+          <label for="displayName" class="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+          <InputText
             id="displayName"
-            v-model="editableUser.displayName"
+            v-model="user.displayName"
             placeholder="Nombre de usuario"
-            class="w-full p-3 rounded-lg"
+            class="w-full p-3 rounded-lg text-black bg-gray-100 border border-gray-300 focus:ring-2 focus:ring-black-300"
           />
         </div>
 
-        <div class="form-group">
-          <label for="email" class="label">Correo Electrónico</label>
-          <InputText 
+        <div>
+          <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Correo Electrónico</label>
+          <InputText
             id="email"
-            v-model="editableUser.email"
-            placeholder="Correo Electrónico"
-            class="w-full p-3 rounded-lg bg-gray-100 cursor-not-allowed"
+            v-model="user.email"
             disabled
+            class="w-full p-3 rounded-lg bg-gray-500 cursor-not-allowed border border-gray-200"
           />
         </div>
 
-        <Button 
-          label="Guardar Cambios" 
+        <Button
+          label="Guardar Cambios"
           type="submit"
-          class="w-full mt-4 p-button-success p-button-rounded font-semibold text-base transition-all hover:scale-105"
           :loading="loading"
+          class="w-full py-3 rounded-full bg-blue-500 text-base font-semibold transform transition hover:scale-105"
         />
       </form>
-
     </div>
-
   </div>
 </template>
 
-<script>
-import Fieldset from 'primevue/fieldset';
-import Button from 'primevue/button';
-import InputText from 'primevue/inputtext';
-import Avatar from 'primevue/avatar';
-import FileUpload from 'primevue/fileupload';
-import Toast from 'primevue/toast';
-import { useToast } from 'primevue/usetoast';
+<script setup>
+import { ref, onMounted } from 'vue'
+import { useToast } from 'primevue/usetoast'
+import Toast from 'primevue/toast'
+import FileUpload from 'primevue/fileupload'
+import InputText from 'primevue/inputtext'
+import Button from 'primevue/button'
+import { getAuth } from 'firebase/auth'
+import dbService from '@/dbService'
 
-import { getAuth } from 'firebase/auth';
-import dbService from '@/dbService'; // Ajusta la ruta si es necesario
+const toast = useToast()
+const user = ref({ displayName: '', email: '', avatar: '' })
+const loading = ref(false)
+let userId = null
 
-export default {
-  components: { Fieldset, Button, InputText, Avatar, FileUpload, Toast },
-  data() {
-    return {
-      editableUser: { displayName: '', email: '', avatar: '' },
-      userId: '',
-      loading: false,
-      toast: null
-    };
-  },
-  mounted() {
-    this.toast = useToast();
-    this.loadUserData();
-  },
-  methods: {
-    async loadUserData() {
-      const auth = getAuth();
-      const currentUser = auth.currentUser;
-      if (currentUser) {
-        this.userId = currentUser.uid;
-        this.editableUser.displayName = currentUser.displayName || '';
-        this.editableUser.email = currentUser.email || '';
+async function loadUser() {
+  const auth = getAuth()
+  const currentUser = auth.currentUser
+  if (!currentUser) return
 
-        const response = await dbService.fetchDocument('users', this.userId);
-        if (response.success && response.data) {
-          if (response.data.avatar) {
-            this.editableUser.avatar = response.data.avatar;
-          }
-          if (response.data.displayName) {
-            this.editableUser.displayName = response.data.displayName;
-          }
-        }
-      }
-    },
-    async updateProfile() {
-      if (!this.userId) return;
-      this.loading = true;
-      try {
-        const updateData = { 
-          displayName: this.editableUser.displayName, 
-          avatar: this.editableUser.avatar 
-        };
-        const res = await dbService.createOrUpdateDocument(['users', this.userId], updateData);
-        if (res.success) {
-          this.toast.add({ severity: 'success', summary: 'Éxito', detail: 'Perfil actualizado.', life: 3000 });
-        } else {
-          this.toast.add({ severity: 'error', summary: 'Error', detail: 'No se pudo actualizar.', life: 3000 });
-        }
-      } catch (error) {
-        console.error(error);
-        this.toast.add({ severity: 'error', summary: 'Error', detail: 'Ocurrió un problema.', life: 3000 });
-      } finally {
-        this.loading = false;
-      }
-    },
-    async handleImageUpload(event) {
-      const file = event.files?.[0];
-      if (!file || !this.userId) return;
-      this.loading = true;
-      try {
-        const path = `users/${this.userId}/avatar.jpg`;
-        const uploadRes = await dbService.uploadFile(path, file);
-        if (!uploadRes.success) throw new Error('Error al subir imagen');
+  userId = currentUser.uid
+  user.value.displayName = currentUser.displayName || ''
+  user.value.email = currentUser.email || ''
 
-        const urlRes = await dbService.getFileURL(path);
-        if (!urlRes.success) throw new Error('Error al obtener URL de imagen');
-
-        this.editableUser.avatar = urlRes.url;
-        await dbService.createOrUpdateDocument(['users', this.userId], { avatar: urlRes.url });
-
-        this.toast.add({ severity: 'success', summary: 'Foto Actualizada', detail: 'Tu avatar fue actualizado.', life: 3000 });
-      } catch (error) {
-        console.error(error);
-        this.toast.add({ severity: 'error', summary: 'Error', detail: 'Error al subir la foto.', life: 3000 });
-      } finally {
-        this.loading = false;
-      }
-    }
+  const res = await dbService.fetchDocument('users', userId)
+  if (res.success && res.data) {
+    user.value.avatar = res.data.avatar || ''
+    user.value.displayName = res.data.displayName || user.value.displayName
   }
-};
+}
+
+async function updateProfile() {
+  if (!userId) return
+  loading.value = true
+  try {
+    const data = { displayName: user.value.displayName, avatar: user.value.avatar }
+    const res = await dbService.createOrUpdateDocument(['users', userId], data)
+    toast.add({ severity: res.success ? 'success' : 'error', summary: res.success ? '¡Éxito!' : 'Error', detail: res.success ? 'Perfil actualizado.' : 'No se pudo actualizar.', life: 3000 })
+  } catch {
+    toast.add({ severity: 'error', summary: 'Error', detail: 'Ocurrió un problema.', life: 3000 })
+  } finally {
+    loading.value = false
+  }
+}
+
+async function handleImageUpload(event) {
+  if (!userId) return
+  loading.value = true
+  try {
+    const file = event.files[0]
+    const path = `users/${userId}/avatar.jpg`
+    const uploadRes = await dbService.uploadFile(path, file)
+    if (!uploadRes.success) throw new Error()
+
+    const urlRes = await dbService.getFileURL(path)
+    if (!urlRes.success) throw new Error()
+
+    user.value.avatar = urlRes.url
+    await dbService.createOrUpdateDocument(['users', userId], { avatar: urlRes.url })
+    toast.add({ severity: 'success', summary: '¡Foto actualizada!', detail: 'Avatar guardado.', life: 3000 })
+  } catch {
+    toast.add({ severity: 'error', summary: 'Error', detail: 'No se pudo subir la foto.', life: 3000 })
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(loadUser)
 </script>
 
 <style scoped>
-/* Animación de fade */
-.fade-enter-active, .fade-leave-active {
-  transition: opacity 0.5s;
-}
-.fade-enter, .fade-leave-to {
-  opacity: 0;
-}
-
-/* Animación general de fade-in */
-.animate-fade-in {
-  animation: fadeIn 0.7s ease-out;
-}
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-
-
-.profile-card {
-  background: #ffffff;
-  border-radius: 20px;
-  padding: 40px 30px;
-  width: 100%;
-  max-width: 600px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-  text-align: center;
-  position: relative;
-}
-
-.avatar-container {
-  margin-bottom: 20px;
-  position: relative;
-  display: inline-block;
-}
-
-.avatar-custom {
-  width: 150px;
-  height: 150px;
-  font-size: 3rem;
-  object-fit: cover;
-}
-
-/* Botón flotante */
-.camera-button {
-  bottom: 0;
-  right: 0;
-}
-
-/* Formulario */
-.form {
-  width: 100%;
-}
-
-.form-group {
-  text-align: left;
-  margin-bottom: 20px;
-}
-
-.label {
-  font-size: 0.9rem;
-  color: #6b7280;
-  margin-bottom: 8px;
-  display: block;
-}
-
-/* Botón primario */
-.p-button {
-  transition: transform 0.3s ease, background-color 0.3s ease;
-}
-
-.p-button:hover {
-  transform: scale(1.05);
-}
+.fade-enter-active, .fade-leave-active { transition: opacity 0.5s }
+.fade-enter, .fade-leave-to { opacity: 0 }
+.animate-fade-in { animation: fadeIn 0.5s ease-out }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(20px) } to { opacity: 1; transform: translateY(0) } }
 </style>
