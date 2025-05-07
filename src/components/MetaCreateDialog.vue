@@ -1,12 +1,12 @@
 <script>
 import DynamicField from '@/components/DynamicField.vue';
-import { Button, Dialog, Toast } from 'primevue';
+import { Button, Dialog, Fieldset, Toast } from 'primevue';
 import { useToast } from 'primevue/usetoast';
 import dbService from '@/dbService';
 
 export default {
   name: 'MetaCreateDialog',
-  components: { DynamicField, Dialog, Button, Toast },
+  components: { DynamicField, Dialog, Button, Fieldset, Toast },
   props: {
     schemaKey: { type: String, required: true },
     visible: { type: Boolean, required: true },
@@ -25,7 +25,13 @@ export default {
     internalVisible: {
       get() { return this.visible; },
       set(val) { this.$emit('update:visible', val); }
-    }
+    },
+    schemaBase() {
+      return this.schema.filter(field => !(field.template && field.template === 'advanced'));
+    },
+    schemaAdvanced() {
+      return this.schema.filter(field => field.template && field.template === 'advanced');
+    },
   },
   watch: {
     visible(newVal) {
@@ -101,8 +107,12 @@ export default {
         <span class="dialog-header">Crear {{ schemaName }}</span>
       </template>
 
-      <DynamicField v-for="field in schema" :key="field.key" :field="field" :modelValue="formData"
+      <DynamicField v-for="field in schemaBase" :key="field.key" :field="field" :modelValue="formData"
         :editable="true" />
+      <Fieldset legend="Opciones avanzadas" collapsed="true" toggleable>
+        <DynamicField v-for="field in schemaAdvanced" :key="field.key" :field="field" :modelValue="formData"
+          :editable="true" />
+      </Fieldset>
 
       <template #footer>
         <Button label="Cancelar" text severity="secondary" @click="internalVisible = false" autofocus />
