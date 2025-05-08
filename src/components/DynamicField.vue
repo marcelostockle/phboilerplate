@@ -1,6 +1,6 @@
 <script>
 import {
-  InputText, Textarea, Checkbox, DatePicker, Select, Button,
+  InputText, InputNumber, Textarea, Checkbox, DatePicker, Select, Button,
   Fieldset, IftaLabel
 } from 'primevue'
 
@@ -16,6 +16,7 @@ export default {
   },
   components: {
     InputText,
+    InputNumber,
     Textarea,
     Checkbox,
     DatePicker,
@@ -23,27 +24,27 @@ export default {
     Button,
     Fieldset,
     IftaLabel,
-    DynamicField: () => import('./DynamicField.vue') // recursive
+    DynamicField: () => import('./DynamicField.vue') // recursive self-import
   },
   computed: {
     isInputRow() {
       return this.field.type === 'string' || this.field.type === 'boolean' ||
-        this.field.type === 'date' || this.field.type === 'select';
+        this.field.type === 'date' || this.field.type === 'select' || this.field.type === 'number';
     },
     isFieldEditable() {
       return this.field.editable !== false && this.editable;
-    }
+    },
   },
   methods: {
     headline(ind) {
       if (this.field.children && this.field.type === 'array' && this.field.itemType === 'object') {
-        const val = this.field.children.find(item => item.display === 'headline');
+        const val = this.field.children.find(item => item.template === 'headline');
         return val ? this.modelValue[this.field.key][ind][val.key] : 'Objeto';
       }
-      return this.modelValue[this.field.key];
+      return this.modelValue[this.field.key][ind];
     },
     addItem() {
-      this.modelValue[this.field.key] ||= [];
+      this.modelValue[this.field.key] ||= []; // Initialize if undefined
       this.modelValue[this.field.key].push({});
     },
     removeItem(index) {
@@ -51,7 +52,13 @@ export default {
     },
     hasNonEditableChild() {
       return this.field.children?.some(child => child.editable === false);
-    }
+    },
+    getAdvancedFields(children) {
+      return children.filter(child => child.template && child.template === 'advanced');
+    },
+    getBasicFields(children) {
+      return children.filter(child => !(child.template && child.template === 'advanced'));
+    },
   }
 }
 </script>
@@ -106,6 +113,16 @@ export default {
           :class="{ 'non-editable': !isFieldEditable }"
         />
       </template>
+      
+      <template v-else-if="field.type === 'number'">
+        <InputNumber
+          v-model="modelValue[field.key]"
+          :id="field.key"
+          :placeholder="0"
+          :disabled="!isFieldEditable"
+          :class="{ 'non-editable': !isFieldEditable }"
+        />
+      </template>
     </div>
 
     <!-- Richtext -->
@@ -137,15 +154,25 @@ export default {
         collapsed
       >
         <DynamicField
-          v-for="childField in field.children"
+          v-for="childField in getBasicFields(field.children)"
           :key="childField.key + i"
           :field="childField"
           :modelValue="item"
           :editable="editable"
         />
+        <Fieldset legend="Opciones avanzadas" toggleable collapsed style="margin-bottom: 10px;">
+          <DynamicField
+            v-for="childField in getAdvancedFields(field.children)"
+            :key="childField.key + i + 'advanced'"
+            :field="childField"
+            :modelValue="item"
+            :editable="editable"
+          />
+        </Fieldset>
         <div class="flex-end">
           <Button
             icon="pi pi-trash"
+            label="Eliminar ítem"
             @click="removeItem(i)"
             :disabled="hasNonEditableChild() || !editable"
           />
@@ -170,10 +197,11 @@ export default {
 <style scoped>
 .input-row {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  justify-content: space-between;
   margin: 8px 0;
+  align-items: center;
 }
-
 .flex-end {
   display: flex;
   flex-direction: row;

@@ -1,12 +1,12 @@
 <script>
 import DynamicField from '@/components/DynamicField.vue';
-import { Button, Dialog, Toast } from 'primevue';
+import { Button, Dialog, Fieldset, Toast } from 'primevue';
 import { useToast } from 'primevue/usetoast';
 import dbService from '@/dbService';
 
 export default {
   name: 'MetaEditDialog',
-  components: { DynamicField, Dialog, Button, Toast },
+  components: { DynamicField, Dialog, Fieldset, Button, Toast },
   props: {
     schemaKey: { type: String, required: true },
     document: Object,
@@ -18,19 +18,25 @@ export default {
     return {
       schema: [],
       schemaName: 'Objeto',
-      formData: {},
+      formData: {}, // Create editable copy
       toast: useToast(),
     };
   },
   computed: {
     internalDoc: {
       get() { return this.document; },
-      set(val) { this.$emit('update:document', val); }
+      set(val) { console.log(val); this.$emit('update:document', val); }
     },
     internalVisible: {
       get() { return this.visible; },
       set(val) { this.$emit('update:visible', val); }
-    }
+    },
+    schemaBase() {
+      return this.schema.filter(field => !(field.template && field.template === 'advanced'));
+    },
+    schemaAdvanced() {
+      return this.schema.filter(field => field.template && field.template === 'advanced');
+    },
   },
   watch: {
     document: {
@@ -39,7 +45,7 @@ export default {
         if (newDoc) {
           this.formData = JSON.parse(JSON.stringify(newDoc)); // Deep copy
         } else {
-          console.warn('document es undefined');
+          console.warn('document is undefined');
           this.formData = {};
         }
       }
@@ -59,12 +65,10 @@ export default {
   },
   methods: {
     async submitEdit() {
-      console.log('submitEdit ejecutado', this.formData);
       try {
         const res = await dbService.createOrUpdateDocument(this.pathArray, this.formData);
-        console.log('Respuesta del servidor:', res);
         if (res.success) {
-          this.internalDoc = res.data;
+          this.internalDoc = this.formData;
           this.internalVisible = false;
           this.toast.add({ severity: 'success', summary: 'Éxito', detail: 'Documento guardado correctamente.', life: 3000 });
         } else {
@@ -87,8 +91,12 @@ export default {
         <span class="dialog-header">Editar {{ schemaName }}</span>
       </template>
 
-      <DynamicField v-for="field in schema" :key="field.key" :field="field" :modelValue="formData"
+      <DynamicField v-for="field in schemaBase" :key="field.key" :field="field" :modelValue="formData"
         :editable="field.editable" />
+      <Fieldset legend="Opciones avanzadas" collapsed="true" toggleable>
+        <DynamicField v-for="field in schemaAdvanced" :key="field.key" :field="field" :modelValue="formData"
+          :editable="field.editable" />
+      </Fieldset>
 
       <template #footer>
         <Button label="Cancelar" text severity="secondary" @click="internalVisible = false" autofocus />
