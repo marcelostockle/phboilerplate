@@ -1,8 +1,13 @@
-// Esti;los globales
+// main.js
+
+// Estilos globales
 import './assets/main.css';            // Tus estilos principales
 import 'primeicons/primeicons.css';    // Íconos de Prime
-import "@/assets/tailwind.css"; // Tailwind CSS
-import ToastService from 'primevue/toastservice'; // <- Fíjate en esto
+import '@/assets/tailwind.css';        // Tailwind CSS
+
+// PrimeVue Services & Forms
+import ToastService from 'primevue/toastservice';      // Servicio de Toasts
+import { Form, FormField } from '@primevue/forms';     // Forms API
 
 // Core de Vue
 import { createApp } from 'vue';
@@ -12,7 +17,7 @@ import router from './router';
 // Inicialización de Firebase
 import { initFirebase } from './firebase';
 
-// Importa la configuración de PrimeVue desde el archivo separado
+// Importa la configuración de PrimeVue (Dialog, Button, Message, etc.)
 import { setupPrimeVue } from './primevue-config';
 
 const startApp = async () => {
@@ -24,8 +29,15 @@ const startApp = async () => {
   // Router
   app.use(router);
 
+  // PrimeVue toast service
   app.use(ToastService);
-  // Configuración de PrimeVue
+
+  // PrimeVue Forms API
+  // Registra el plugin para que <Form> y <FormField> funcionen
+  app.component(Form);
+  app.component(FormField);
+
+  // Configuración adicional de PrimeVue (componentes globales)
   setupPrimeVue(app);
 
   // Montamos la aplicación en #app
