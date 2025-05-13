@@ -44,8 +44,11 @@
 
       <!-- Enlace de registro -->
       <div class="text-center mt-6">
+        <RouterLink to="/newpassword" class="underline hover:text-blue-200">
+        ¿Olvidaste tu contraseña?
+      </RouterLink>
         <RouterLink to="/signup" class="text-white underline hover:text-blue-200">
-          ¿Nuevo en Plan DO? Regístrate
+          ¿Nuevo en PlanHumano? Regístrate
         </RouterLink>
       </div>
     </div>
