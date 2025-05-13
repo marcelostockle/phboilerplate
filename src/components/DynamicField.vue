@@ -1,14 +1,24 @@
 <script>
 import {
-  InputText, InputNumber, Textarea, Checkbox, DatePicker, Select, Button,
-  Fieldset, IftaLabel
+  InputText,
+  InputNumber,
+  Textarea,
+  Checkbox,
+  DatePicker,
+  Select,
+  Button,
+  Fieldset,
+  IftaLabel
 } from 'primevue'
 
 export default {
   name: 'DynamicField',
   props: {
-    field: Object,
-    modelValue: Object,
+    field: { type: Object, required: true },
+    modelValue: {
+      type: [Object, String, Number, Boolean, Date, Array],
+      default: null
+    },
     editable: {
       type: Boolean,
       default: true
@@ -24,205 +34,201 @@ export default {
     Button,
     Fieldset,
     IftaLabel,
-    DynamicField: () => import('./DynamicField.vue') // recursive self-import
+    DynamicField: () => import('./DynamicField.vue')
   },
   computed: {
     isInputRow() {
-      return this.field.type === 'string' || this.field.type === 'boolean' ||
-        this.field.type === 'date' || this.field.type === 'select' || this.field.type === 'number';
+      return ['string', 'boolean', 'date', 'select', 'number'].includes(this.field.type);
     },
     isFieldEditable() {
       return this.field.editable !== false && this.editable;
-    },
+    }
   },
   methods: {
+    emitChange(val) {
+      this.$emit('update:modelValue', val)
+    },
     headline(ind) {
       if (this.field.children && this.field.type === 'array' && this.field.itemType === 'object') {
         const val = this.field.children.find(item => item.template === 'headline');
-        return val ? this.modelValue[this.field.key][ind][val.key] : 'Objeto';
+        return val ? this.modelValue[ind][val.key] : 'Ítem';
       }
-      return this.modelValue[this.field.key][ind];
+      return this.modelValue[ind];
     },
     addItem() {
-      this.modelValue[this.field.key] ||= []; // Initialize if undefined
-      this.modelValue[this.field.key].push({});
+      this.modelValue ||= [];
+      this.emitChange([...this.modelValue, {}]);
     },
     removeItem(index) {
-      this.modelValue[this.field.key].splice(index, 1);
+      const arr = [...this.modelValue];
+      arr.splice(index, 1);
+      this.emitChange(arr);
     },
     hasNonEditableChild() {
       return this.field.children?.some(child => child.editable === false);
     },
     getAdvancedFields(children) {
-      return children.filter(child => child.template && child.template === 'advanced');
+      return children.filter(child => child.template === 'advanced');
     },
     getBasicFields(children) {
-      return children.filter(child => !(child.template && child.template === 'advanced'));
-    },
+      return children.filter(child => child.template !== 'advanced');
+    }
   }
 }
 </script>
 
 <template>
   <div class="p-fluid">
-
-    <!-- String, boolean, date, select -->
     <div v-if="isInputRow" class="input-row">
       <label :for="field.key" class="field-label">
         {{ field.label }}
-        <i v-if="!isFieldEditable" class="pi pi-lock lock-icon" title="Campo no editable" />
+        <i v-if="!isFieldEditable" class="pi pi-lock lock-icon" />
       </label>
 
-      <template v-if="field.type === 'string'">
-        <InputText
-          v-model="modelValue[field.key]"
-          :id="field.key"
-          :disabled="!isFieldEditable"
-          :class="{ 'non-editable': !isFieldEditable }"
-        />
-      </template>
+      <InputText
+        v-if="field.type === 'string'"
+        :modelValue="modelValue"
+        @update:modelValue="emitChange"
+        :id="field.key"
+        :disabled="!isFieldEditable"
+        :class="{ 'non-editable': !isFieldEditable }"
+      />
 
-      <template v-else-if="field.type === 'boolean'">
-        <Checkbox
-          v-model="modelValue[field.key]"
-          :inputId="field.key"
-          binary
-          :disabled="!isFieldEditable"
-          :class="{ 'non-editable': !isFieldEditable }"
-        />
-      </template>
+      <Checkbox
+        v-else-if="field.type === 'boolean'"
+        :modelValue="modelValue"
+        @update:modelValue="emitChange"
+        :inputId="field.key"
+        binary
+        :disabled="!isFieldEditable"
+        :class="{ 'non-editable': !isFieldEditable }"
+      />
 
-      <template v-else-if="field.type === 'date'">
-        <DatePicker
-          v-model="modelValue[field.key]"
-          :id="field.key"
-          dateFormat="yy-mm-dd"
-          showIcon
-          :disabled="!isFieldEditable"
-          :class="{ 'non-editable': !isFieldEditable }"
-        />
-      </template>
+      <DatePicker
+        v-else-if="field.type === 'date'"
+        :modelValue="modelValue"
+        @update:modelValue="emitChange"
+        :id="field.key"
+        dateFormat="yy-mm-dd"
+        showIcon
+        :disabled="!isFieldEditable"
+        :class="{ 'non-editable': !isFieldEditable }"
+      />
 
-      <template v-else-if="field.type === 'select'">
-        <Select
-          v-model="modelValue[field.key]"
-          :options="field.options"
-          :id="field.key"
-          placeholder="Elija uno"
-          :disabled="!isFieldEditable"
-          :class="{ 'non-editable': !isFieldEditable }"
-        />
-      </template>
-      
-      <template v-else-if="field.type === 'number'">
-        <InputNumber
-          v-model="modelValue[field.key]"
-          :id="field.key"
-          :placeholder="0"
-          :disabled="!isFieldEditable"
-          :class="{ 'non-editable': !isFieldEditable }"
-        />
-      </template>
+      <Select
+        v-else-if="field.type === 'select'"
+        :modelValue="modelValue"
+        @update:modelValue="emitChange"
+        :options="field.options"
+        :id="field.key"
+        placeholder="Elija uno"
+        :disabled="!isFieldEditable"
+        :class="{ 'non-editable': !isFieldEditable }"
+      />
+
+      <InputNumber
+        v-else-if="field.type === 'number'"
+        :modelValue="modelValue"
+        @update:modelValue="emitChange"
+        :id="field.key"
+        placeholder="0"
+        :disabled="!isFieldEditable"
+        :class="{ 'non-editable': !isFieldEditable }"
+      />
     </div>
 
-    <!-- Richtext -->
     <IftaLabel v-else-if="field.type === 'richtext'">
       <label :for="field.key" class="field-label">
         {{ field.label }}
-        <i v-if="!isFieldEditable" class="pi pi-lock lock-icon" title="Campo no editable" />
+        <i v-if="!isFieldEditable" class="pi pi-lock lock-icon" />
       </label>
       <Textarea
-        class="wide"
-        v-model="modelValue[field.key]"
+        :modelValue="modelValue"
+        @update:modelValue="emitChange"
         :id="field.key"
         :disabled="!isFieldEditable"
         :class="{ 'non-editable': !isFieldEditable }"
       />
     </IftaLabel>
 
-    <!-- Array of objects -->
     <div v-else-if="field.type === 'array' && field.itemType === 'object'">
       <div class="input-row" style="margin-bottom: 0;">
-        <h2 style="color: inherit">{{ field.label }}</h2>
+        <h2>{{ field.label }}</h2>
         <Button icon="pi pi-plus" @click="addItem" severity="secondary" :disabled="!editable" />
       </div>
+
       <Fieldset
-        v-for="(item, i) in modelValue[field.key]"
+        v-for="(item, i) in modelValue"
         :key="i"
         :legend="headline(i)"
         toggleable
         collapsed
       >
         <DynamicField
-          v-for="childField in getBasicFields(field.children)"
-          :key="childField.key + i"
-          :field="childField"
-          :modelValue="item"
+          v-for="child in getBasicFields(field.children)"
+          :key="child.key + i"
+          :field="child"
+          :modelValue="item[child.key]"
+          @update:modelValue="val => {
+            const arr = [...modelValue]; arr[i] = { ...arr[i], [child.key]: val }; emitChange(arr);
+          }"
           :editable="editable"
         />
-        <Fieldset legend="Opciones avanzadas" toggleable collapsed style="margin-bottom: 10px;">
+        <Fieldset legend="Opciones avanzadas" toggleable collapsed>
           <DynamicField
-            v-for="childField in getAdvancedFields(field.children)"
-            :key="childField.key + i + 'advanced'"
-            :field="childField"
-            :modelValue="item"
+            v-for="child in getAdvancedFields(field.children)"
+            :key="child.key + i + 'adv'"
+            :field="child"
+            :modelValue="item[child.key]"
+            @update:modelValue="val => {
+              const arr = [...modelValue]; arr[i] = { ...arr[i], [child.key]: val }; emitChange(arr);
+            }"
             :editable="editable"
           />
         </Fieldset>
         <div class="flex-end">
-          <Button
-            icon="pi pi-trash"
-            label="Eliminar ítem"
-            @click="removeItem(i)"
-            :disabled="hasNonEditableChild() || !editable"
-          />
+          <Button icon="pi pi-trash" label="Eliminar ítem" @click="removeItem(i)" :disabled="hasNonEditableChild() || !editable" />
         </div>
       </Fieldset>
     </div>
 
-    <!-- Object -->
     <div v-else-if="field.type === 'object'">
       <DynamicField
-        v-for="childField in field.children"
-        :key="childField.key"
-        :field="childField"
-        :modelValue="modelValue[field.key]"
+        v-for="child in field.children"
+        :key="child.key"
+        :field="child"
+        :modelValue="modelValue[child.key]"
+        @update:modelValue="val => {
+          const obj = { ...modelValue, [child.key]: val }; emitChange(obj);
+        }"
         :editable="editable"
       />
     </div>
-
   </div>
 </template>
 
 <style scoped>
 .input-row {
   display: flex;
-  flex-direction: row;
   justify-content: space-between;
-  margin: 8px 0;
   align-items: center;
+  margin: 8px 0;
 }
 .flex-end {
   display: flex;
-  flex-direction: row;
   justify-content: flex-end;
 }
-
 .wide {
   width: 100%;
 }
-
 .non-editable {
   background-color: #f0f0f0 !important;
   cursor: not-allowed;
 }
-
 .lock-icon {
   margin-left: 0.4rem;
   color: #999;
-  font-size: 1rem;
 }
-
 .field-label {
   display: flex;
   align-items: center;

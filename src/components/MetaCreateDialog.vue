@@ -1,104 +1,3 @@
-<script>
-import DynamicField from '@/components/DynamicField.vue';
-import { Button, Dialog, Fieldset, Toast } from 'primevue';
-import { useToast } from 'primevue/usetoast';
-import dbService from '@/dbService';
-
-export default {
-  name: 'MetaCreateDialog',
-  components: { DynamicField, Dialog, Button, Fieldset, Toast },
-  props: {
-    schemaKey: { type: String, required: true },
-    visible: { type: Boolean, required: true },
-    pathArray: { type: Array, default: () => [] },
-  },
-  emits: ['update:visible', 'success'],
-  data() {
-    return {
-      schema: [],
-      schemaName: 'Nuevo objeto',
-      formData: {},
-      toast: useToast(),
-    };
-  },
-  computed: {
-    internalVisible: {
-      get() { return this.visible; },
-      set(val) { this.$emit('update:visible', val); }
-    },
-    schemaBase() {
-      return this.schema.filter(field => !(field.template && field.template === 'advanced'));
-    },
-    schemaAdvanced() {
-      return this.schema.filter(field => field.template && field.template === 'advanced');
-    },
-  },
-  watch: {
-    visible(newVal) {
-      if (newVal) {
-        this.initializeFormData();
-      }
-    }
-  },
-  async created() {
-    const res = await dbService.fetchDocument('schemata', this.schemaKey);
-    if (res.success) {
-      this.schema = res.data.schema.filter(field => field.editable !== false);
-      this.schemaName = res.data.name || 'Nuevo objeto';
-      this.initializeFormData();
-    } else {
-      this.toast.add({ severity: 'error', summary: 'Error', detail: 'No se pudo cargar el esquema.', life: 3000 });
-    }
-  },
-  methods: {
-    initializeFormData() {
-      this.formData = {};
-      this.schema.forEach(field => {
-        if (field.type === 'array') {
-          this.formData[field.key] = [];
-        } else if (field.type === 'object') {
-          this.formData[field.key] = {};
-        } else {
-          this.formData[field.key] = null;
-        }
-      });
-    },
-    async submitCreate() {
-      try {
-        this.formData.createdAt = new Date().toISOString();
-
-        const res = await dbService.createOrUpdateDocument(this.pathArray, this.formData);
-        if (res.success) {
-          this.$emit('success', this.formData);
-          this.internalVisible = false;
-          this.toast.add({
-            severity: 'success',
-            summary: 'Éxito',
-            detail: 'Documento creado correctamente.',
-            life: 3000
-          });
-        } else {
-          this.toast.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: 'No se pudo crear el documento.',
-            life: 3000
-          });
-        }
-      } catch (err) {
-        console.error(err);
-        this.toast.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: 'Error inesperado al crear.',
-          life: 3000
-        });
-      }
-    }
-  }
-}
-</script>
-
 <template>
   <div>
     <Toast />
@@ -107,24 +6,151 @@ export default {
         <span class="dialog-header">Crear {{ schemaName }}</span>
       </template>
 
-      <DynamicField v-for="field in schemaBase" :key="field.key" :field="field" :modelValue="formData"
-        :editable="true" />
-      <Fieldset legend="Opciones avanzadas" collapsed="true" toggleable>
-        <DynamicField v-for="field in schemaAdvanced" :key="field.key" :field="field" :modelValue="formData"
-          :editable="true" />
-      </Fieldset>
+      <Form
+        :initialValues="formData"
+        :resolver="formResolver"
+        @submit="onFormSubmit"
+        class="p-6"
+      >
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <FormField
+            v-for="field in schemaBase"
+            :key="field.key"
+            :name="field.key"
+            v-slot="$f"
+            class="field"
+          >
+            <label :for="field.key">{{ field.label }}*</label>
+            <DynamicField
+              :field="field"
+              v-model="formData[field.key]"
+              :editable="true"
+              :id="field.key"
+              class="w-full"
+              :class="{ 'p-invalid': $f.invalid }"
+            />
+            <Message v-if="$f.invalid" severity="error" size="small">
+              {{ $f.error?.message }}
+            </Message>
+          </FormField>
+        </div>
 
-      <template #footer>
-        <Button label="Cancelar" text severity="secondary" @click="internalVisible = false" autofocus />
-        <Button label="Crear" outlined severity="secondary" @click="submitCreate" autofocus />
-      </template>
+        <Fieldset legend="Opciones avanzadas" toggleable collapsed class="mt-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormField
+              v-for="field in schemaAdvanced"
+              :key="field.key"
+              :name="field.key"
+              v-slot="$f"
+              class="field"
+            >
+              <label :for="field.key">{{ field.label }}*</label>
+              <DynamicField
+                :field="field"
+                v-model="formData[field.key]"
+                :editable="true"
+                :id="field.key"
+                class="w-full"
+                :class="{ 'p-invalid': $f.invalid }"
+              />
+              <Message v-if="$f.invalid" severity="error" size="small">
+                {{ $f.error?.message }}
+              </Message>
+            </FormField>
+          </div>
+        </Fieldset>
+
+        <div class="flex justify-end gap-2 mt-6">
+          <Button label="Cancelar" text severity="secondary" @click="internalVisible = false" />
+          <Button type="submit" label="Crear" severity="secondary" outlined />
+        </div>
+      </Form>
     </Dialog>
   </div>
 </template>
 
+<script setup>
+import { ref, reactive, computed, watch, onMounted } from 'vue';
+import { useToast } from 'primevue/usetoast';
+import { Form, FormField } from '@primevue/forms';
+import Message from 'primevue/message';
+import Button from 'primevue/button';
+import Dialog from 'primevue/dialog';
+import Fieldset from 'primevue/fieldset';
+import Toast from 'primevue/toast';
+import DynamicField from '@/components/DynamicField.vue';
+import dbService from '@/dbService';
+import { z } from 'zod';
+import { zodResolver } from '@primevue/forms/resolvers/zod';
+
+const props = defineProps({
+  schemaKey: { type: String, required: true },
+  visible: { type: Boolean, required: true },
+  pathArray: { type: Array, default: () => [] },
+});
+const emit = defineEmits(['update:visible', 'success']);
+
+const toast = useToast();
+const schema = ref([]);
+const schemaName = ref('Nuevo objeto');
+const formData = reactive({});
+
+const internalVisible = computed({
+  get: () => props.visible,
+  set: v => emit('update:visible', v)
+});
+
+const schemaBase = computed(() => schema.value.filter(f => f.template !== 'advanced'));
+const schemaAdvanced = computed(() => schema.value.filter(f => f.template === 'advanced'));
+
+watch(
+  () => props.visible,
+  val => { if (val) initialize(); }
+);
+
+const initialize = () => {
+  Object.keys(formData).forEach(k => delete formData[k]);
+  schema.value.forEach(f => {
+    formData[f.key] = f.type === 'array' ? [] : f.type === 'object' ? {} : null;
+  });
+};
+
+const formResolver = computed(() => {
+  const shape = {};
+  schema.value.forEach(f => { shape[f.key] = z.string().min(1, { message: `${f.label} es requerido.` }); });
+  return zodResolver(z.object(shape));
+});
+
+onMounted(async () => {
+  const res = await dbService.fetchDocument('schemata', props.schemaKey);
+  if (res.success) {
+    schema.value = res.data.schema.filter(f => f.editable !== false);
+    schemaName.value = res.data.name;
+    initialize();
+  } else {
+    toast.add({ severity: 'error', summary: 'Error', detail: 'No se pudo cargar el esquema.', life: 3000 });
+  }
+});
+
+const onFormSubmit = async ({ valid }) => {
+  if (!valid) return;
+  try {
+    formData.createdAt = new Date().toISOString();
+    const res = await dbService.createOrUpdateDocument(props.pathArray, JSON.parse(JSON.stringify(formData)));
+    if (res.success) {
+      emit('success', formData);
+      internalVisible.value = false;
+      toast.add({ severity: 'success', summary: 'Éxito', detail: 'Documento creado.', life: 3000 });
+    } else {
+      toast.add({ severity: 'error', summary: 'Error', detail: res.message, life: 3000 });
+    }
+  } catch (err) {
+    toast.add({ severity: 'error', summary: 'Error', detail: err.message, life: 3000 });
+  }
+};
+</script>
+
 <style>
-.dialog-header {
-  font-weight: 600;
-  font-size: 1.25rem;
-}
+.dialog-header { font-weight: 600; font-size: 1.25rem; }
+.field label { display: block; margin-bottom: 0.25rem; font-weight: 500; }
 </style>
