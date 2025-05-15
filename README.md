@@ -265,3 +265,14 @@ Esto le indica a Node que debe interpretar ese archivo como CommonJS, lo cual es
 @tailwind components;
 @tailwind utilities;
 ```
+#### 6. Install Forms
+```sh
+npm install primevue @primevue/form
+```
+### agregar a main.js
+```sh
+import { Form, FormField } from '@primevue/forms'; 
+
+app.component(Form);
+app.component(FormField);
+```
