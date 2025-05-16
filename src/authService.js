@@ -4,7 +4,9 @@ import {
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  signInWithPhoneNumber,
+  RecaptchaVerifier
  } from "firebase/auth";
 import { reactive, readonly } from "vue";
 import dbService from "./dbService";
@@ -13,6 +15,8 @@ const state = reactive({
   user: null,
   isLoggedIn: false,
 });
+
+let confirmationResult = null;
 
 const initAuthListener = async () => {
   const { auth } = await getFirebaseServices();
@@ -79,10 +83,78 @@ const resetPassword = async (email) => {
   }
 };
 
+// Phone authentication
+// - recaptchaContainerID: Specify the ID of the button that submits your sign-in form
+const startPhoneSignIn = async (phoneNumber, recaptchaContainerId = "recaptcha-container") => {
+  const { auth } = await getFirebaseServices();
+  auth.languageCode = "es";
+
+  try {
+    // Only create reCAPTCHA once
+    if (!window.recaptchaVerifier) {
+      window.recaptchaVerifier = new RecaptchaVerifier(auth, recaptchaContainerId, {
+        size: "invisible",
+        callback: (response) => {
+          // reCAPTCHA solved
+        }
+      });
+    }
+
+    const appVerifier = window.recaptchaVerifier;
+    confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
+    return { success: true, message: "Code sent successfully" };
+  } catch (error) {
+    console.error("Phone sign-in error:", error);
+    return { success: false, message: error.code };
+  }
+};
+
+// Prematurely stop phone sign-in
+// This is useful if the user decides to cancel the sign-in process
+const stopPhoneSignIn = () => {
+  if (window.recaptchaVerifier?.clear) {
+    window.recaptchaVerifier.clear();
+  }
+  confirmationResult = null;
+  window.recaptchaVerifier = null;
+};
+
+const confirmPhoneCode = async (code, userData = {}) => {
+  if (!confirmationResult) {
+    return { success: false, message: "No confirmation available" };
+  }
+
+  try {
+    const result = await confirmationResult.confirm(code);
+    const user = result.user;
+
+    await dbService.createOrUpdateDocument(['users', user.uid], {
+      phoneNumber: user.phoneNumber,
+      displayName: userData.displayName || "Nuevo usuario",
+      createdAt: user.metadata.creationTime,
+    });
+
+    return { success: true, user, message: "Signed in successfully" };
+  } catch (error) {
+    console.error("Code confirmation error:", error);
+    return { success: false, message: error.code };
+  } finally {
+    // Clean up recaptcha
+    if (window.recaptchaVerifier?.clear) {
+      window.recaptchaVerifier.clear();
+    }
+    confirmationResult = null;
+    window.recaptchaVerifier = null;
+  }
+};
+
 export default {
   state: readonly(state),
   registerUser,
   loginUser,
   logoutUser,
   resetPassword,
+  startPhoneSignIn,
+  stopPhoneSignIn,
+  confirmPhoneCode,
 };
