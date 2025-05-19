@@ -14,11 +14,12 @@
         @submit="onFormSubmit"
         class="p-6"
       >
-        <!-- Grid principal: 2 columnas en sm+ con separación uniforme -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-          <!-- Creado (solo lectura) -->
-          <div class="field mb-4">
-            <label for="createdAt" class="block text-sm font-medium text-gray-700 mb-1">Creado</label>
+          <!-- createdAt fijo, solo lectura -->
+          <div class="field mb-4 sm:col-span-2">
+            <label for="createdAt" class="block text-sm font-medium text-gray-700 mb-1">
+              Creado
+            </label>
             <DatePicker
               id="createdAt"
               v-model="formData.createdAt"
@@ -29,39 +30,29 @@
             />
           </div>
 
-          <!-- Título -->
-          <FormField name="titulo" v-slot="$f" class="field mb-4">
-            <label for="titulo" class="block text-sm font-medium text-gray-700 mb-1">Título*</label>
-            <DynamicField
-              :field="schemaBase.find(f => f.key === 'titulo')"
-              v-model="formData.titulo"
-              :editable="true"
-              :id="'titulo'"
-              class="w-full"
-              :class="{ 'p-invalid': $f.invalid }"
-            />
-            <Message v-if="$f.invalid" severity="error" size="small">{{ $f.error?.message }}</Message>
-          </FormField>
-
-          <!-- Instrucciones (ocupa dos columnas) -->
+          <!-- Resto de campos base -->
           <FormField
-            name="instrucciones"
+            v-for="field in schemaBase.filter(f => f.key !== 'createdAt')"
+            :key="field.key"
+            :name="field.key"
             v-slot="$f"
-            class="field mb-4 sm:col-span-2"
+            :class="['field mb-4', field.key === 'instrucciones' ? 'sm:col-span-2' : '']"
           >
-            <label for="instrucciones" class="block text-sm font-medium text-gray-700 mb-1">Instrucciones*</label>
-            <Textarea
-              id="instrucciones"
-              v-model="formData.instrucciones"
-              rows="4"
+            <DynamicField
+              :field="field"
+              v-model="formData[field.key]"
+              :editable="field.editable"
+              :id="field.key"
               class="w-full"
               :class="{ 'p-invalid': $f.invalid }"
             />
-            <Message v-if="$f.invalid" severity="error" size="small">{{ $f.error?.message }}</Message>
+            <Message v-if="$f.invalid" severity="error" size="small">
+              {{ $f.error?.message }}
+            </Message>
           </FormField>
         </div>
 
-        <!-- Sección de Opciones avanzadas -->
+        <!-- Opciones avanzadas -->
         <Fieldset legend="Opciones avanzadas" toggleable collapsed class="mt-6 p-4">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
             <FormField
@@ -71,9 +62,6 @@
               v-slot="$f"
               class="field mb-4"
             >
-              <label :for="field.key" class="block text-sm font-medium text-gray-700 mb-1">
-                {{ field.label }}*
-              </label>
               <DynamicField
                 :field="field"
                 v-model="formData[field.key]"
@@ -82,12 +70,14 @@
                 class="w-full"
                 :class="{ 'p-invalid': $f.invalid }"
               />
-              <Message v-if="$f.invalid" severity="error" size="small">{{ $f.error?.message }}</Message>
+              <Message v-if="$f.invalid" severity="error" size="small">
+                {{ $f.error?.message }}
+              </Message>
             </FormField>
           </div>
         </Fieldset>
 
-        <!-- Botones de acción -->
+        <!-- Botones -->
         <div class="flex justify-end gap-2 mt-6">
           <Button label="Cancelar" text severity="secondary" @click="internalVisible = false" />
           <Button type="submit" label="Aceptar" severity="secondary" outlined />
@@ -107,22 +97,20 @@ import Dialog from 'primevue/dialog';
 import Fieldset from 'primevue/fieldset';
 import Toast from 'primevue/toast';
 import DatePicker from 'primevue/datepicker';
-import Textarea from 'primevue/textarea';
 import DynamicField from '@/components/DynamicField.vue';
 import dbService from '@/dbService';
 import { z } from 'zod';
 import { zodResolver } from '@primevue/forms/resolvers/zod';
 
-// Props & emits
+// Props y emits
 const props = defineProps({
-  schemaKey: { type: String, required: true },
+  schemaKey: String,
   document: Object,
-  visible: { type: Boolean, required: true },
-  pathArray: { type: Array, default: () => [] }
+  visible: Boolean,
+  pathArray: Array
 });
 const emit = defineEmits(['update:visible', 'update:document']);
 
-// Estado local
 const toast = useToast();
 const schema = ref([]);
 const schemaName = ref('Objeto');
@@ -141,7 +129,7 @@ const internalDoc = computed({
 const schemaBase = computed(() => schema.value.filter(f => f.template !== 'advanced'));
 const schemaAdvanced = computed(() => schema.value.filter(f => f.template === 'advanced'));
 
-// Reconstruye formData al cambiar document y convierte fechas
+// Reconstruir formData y convertir fechas
 watch(() => props.document, doc => {
   if (doc) {
     Object.keys(formData).forEach(k => delete formData[k]);
@@ -155,24 +143,37 @@ watch(() => props.document, doc => {
   }
 }, { immediate: true });
 
-// Resolver Zod adaptado a tipos
+// Resolver Zod dinámico
 const formResolver = computed(() => {
   const shape = {};
   schema.value.forEach(f => {
+    let zodSchema;
     if (f.type === 'date') {
-      shape[f.key] = z.date({ required_error: `${f.label} es requerido.`, invalid_type_error: `${f.label} debe ser una fecha válida.` });
+      zodSchema = z.date({
+        required_error: `${f.label} es requerido.`,
+        invalid_type_error: `${f.label} debe ser una fecha válida.`
+      });
+      if (!f.required) zodSchema = zodSchema.optional();
+    } else if (f.type === 'number') {
+      zodSchema = z.number({
+        required_error: `${f.label} es requerido.`,
+        invalid_type_error: `${f.label} debe ser un número.`
+      });
+      if (!f.required) zodSchema = zodSchema.optional();
+    } else {
+      if (f.required) {
+        zodSchema = z.string({ required_error: `${f.label} es requerido.` })
+                     .min(1, { message: `${f.label} es requerido.` });
+      } else {
+        zodSchema = z.string().optional();
+      }
     }
-    else if (f.type === 'number') {
-      shape[f.key] = z.number({ required_error: `${f.label} es requerido.`, invalid_type_error: `${f.label} debe ser un número.` });
-    }
-    else {
-      shape[f.key] = z.string({ required_error: `${f.label} es requerido.` }).min(1, { message: `${f.label} es requerido.` });
-    }
+    shape[f.key] = zodSchema;
   });
   return zodResolver(z.object(shape));
 });
 
-// Carga esquema onMount
+// Cargar esquema
 onMounted(async () => {
   const res = await dbService.fetchDocument('schemata', props.schemaKey);
   if (res.success) {
@@ -186,39 +187,38 @@ onMounted(async () => {
   }
 });
 
-// Manejo de envío
+// Envío
 const onFormSubmit = async ({ valid }) => {
   if (!valid) return;
   try {
     const payload = JSON.parse(JSON.stringify(formData));
     if (payload.id) {
       const [collectionName] = props.pathArray;
-      const res = await dbService.updateDocument(collectionName, payload.id, payload);
-      if (res.success) {
+      const r = await dbService.updateDocument(collectionName, payload.id, payload);
+      if (r.success) {
         internalDoc.value = payload;
         internalVisible.value = false;
         toast.add({ severity: 'success', summary: 'Éxito', detail: 'Documento actualizado.', life: 3000 });
       } else {
-        toast.add({ severity: 'error', summary: 'Error', detail: res.message || res.code, life: 3000 });
+        toast.add({ severity: 'error', summary: 'Error', detail: r.message || r.code, life: 3000 });
       }
     } else {
-      const res = await dbService.createOrUpdateDocument(props.pathArray, payload);
-      if (res.success) {
-        payload.id = res.id;
+      const r = await dbService.createOrUpdateDocument(props.pathArray, payload);
+      if (r.success) {
+        payload.id = r.id;
         internalDoc.value = payload;
         internalVisible.value = false;
         toast.add({ severity: 'success', summary: 'Éxito', detail: 'Documento creado.', life: 3000 });
       } else {
-        toast.add({ severity: 'error', summary: 'Error', detail: res.message || res.code, life: 3000 });
+        toast.add({ severity: 'error', summary: 'Error', detail: r.message || r.code, life: 3000 });
       }
     }
-  } catch (err) {
-    toast.add({ severity: 'error', summary: 'Error', detail: `Error inesperado: ${err.message}`, life: 3000 });
+  } catch (e) {
+    toast.add({ severity: 'error', summary: 'Error', detail: `Error inesperado: ${e.message}`, life: 3000 });
   }
 };
 </script>
 
 <style>
 .dialog-header { font-weight: 600; font-size: 1.25rem; }
-.field label { display: block; margin-bottom: 0.25rem; font-weight: 500; }
 </style>
