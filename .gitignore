@@ -30,3 +30,4 @@ coverage
 *.tsbuildinfo
 .firebaserc
 .firebase/hosting.ZGlzdA.cache
+src/views/DesafiosView.vue
