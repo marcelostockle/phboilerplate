@@ -7,23 +7,17 @@ import {
   DatePicker,
   Select,
   Button,
-  Fieldset,
-  IftaLabel
+  Fieldset
 } from 'primevue'
+import { v4 as uuid } from 'uuid'
+import rfdc from 'rfdc'
+import { defineAsyncComponent } from 'vue'
+
+// clon profundo robusto
+const clone = rfdc()
 
 export default {
   name: 'DynamicField',
-  props: {
-    field: { type: Object, required: true },
-    modelValue: {
-      type: [Object, String, Number, Boolean, Date, Array],
-      default: null
-    },
-    editable: {
-      type: Boolean,
-      default: true
-    }
-  },
   components: {
     InputText,
     InputNumber,
@@ -33,54 +27,124 @@ export default {
     Select,
     Button,
     Fieldset,
-    IftaLabel,
-    DynamicField: () => import('./DynamicField.vue')
+    // importación recursiva asíncrona para subcampos
+    DynamicField: defineAsyncComponent(() => import('./DynamicField.vue'))
   },
+
+  props: {
+    field:      { type: Object, required: true },
+    modelValue: { type: [String, Number, Boolean, Date, Array, Object], default: null },
+    editable:   { type: Boolean, default: true },
+    prefix:     { type: String, default: '' }       // ruta padre, e.g. "arreglo[0]"
+  },
+
   computed: {
-    isInputRow() {
-      return ['string', 'boolean', 'date', 'select', 'number'].includes(this.field.type);
+    // ruta completa para key/id y para set()
+    resolvedPrefix() {
+      return this.prefix
+        ? `${this.prefix}.${this.field.key}`
+        : this.field.key
     },
+    // decide si es un input simple
+    isInputRow() {
+      return ['string','boolean','date','select','number']
+        .includes(this.field.type)
+    },
+    // controla disabled
     isFieldEditable() {
-      return this.field.editable !== false && this.editable;
+      return this.field.editable !== false && this.editable
+    },
+    // mapea a componente de PrimeVue
+    inputComponent() {
+      const t = this.field.type
+      return t === 'string'   ? 'InputText'
+           : t === 'boolean'  ? 'Checkbox'
+           : t === 'date'     ? 'DatePicker'
+           : t === 'select'   ? 'Select'
+           : t === 'number'   ? 'InputNumber'
+           : 'InputText'
     }
   },
+
   methods: {
-    emitChange(val) {
-      this.$emit('update:modelValue', val);
+    /**
+     * Emite SIEMPRE { path, value }.
+     * El padre (MetaEditDialog) usará lodash.set(formData, path, value).
+     */
+    emitFieldChange(path, value) {
+        // y también emitimos el valor completo del modelo
+      this.$emit('update:modelValue', value)
+      // emitimos path y value por separado
+      this.$emit('field-change', path, value)
     },
-    headline(index) {
-      const templateField = this.field.children?.find(c => c.template === 'headline');
-      return templateField
-        ? this.modelValue[index][templateField.key]
-        : `Ítem ${index + 1}`;
+
+    headline(i) {
+      const h = this.field.children?.find(c => c.template === 'headline')
+      return h
+        ? (this.modelValue?.[i] || {})[h.key]
+        : `Ítem ${i + 1}`
     },
+
+    /** Añade un nuevo objeto al array y emite el array completo */
     addItem() {
-      const arr = Array.isArray(this.modelValue) ? [...this.modelValue] : [];
-      arr.push({});
-      this.emitChange(arr);
+      const arr = Array.isArray(this.modelValue)
+        ? clone(this.modelValue)
+        : []
+      const template = (this.field.children || []).reduce((o, c) => {
+        o[c.key] = c.defaultValue ?? ''
+        return o
+      }, {})
+      arr.push({ id: uuid(), ...template })
+      this.emitFieldChange(this.resolvedPrefix, arr)
     },
-    removeItem(index) {
-      const arr = [...this.modelValue];
-      arr.splice(index, 1);
-      this.emitChange(arr);
+
+    /** Elimina por índice y emite el array completo */
+    removeItem(i) {
+      const arr = clone(this.modelValue || [])
+      arr.splice(i, 1)
+      this.emitFieldChange(this.resolvedPrefix, arr)
     },
-    moveItemUp(index) {
-      if (index <= 0) return;
-      const arr = [...this.modelValue];
-      [arr[index - 1], arr[index]] = [arr[index], arr[index - 1]];
-      this.emitChange(arr);
+
+    /** Intercambia hacia arriba y emite el array completo */
+    moveItemUp(i) {
+      if (i === 0) return
+      const arr = clone(this.modelValue || [])
+      ;[arr[i-1], arr[i]] = [arr[i], arr[i-1]]
+      this.emitFieldChange(this.resolvedPrefix, arr)
     },
-    moveItemDown(index) {
-      if (index >= this.modelValue.length - 1) return;
-      const arr = [...this.modelValue];
-      [arr[index], arr[index + 1]] = [arr[index + 1], arr[index]];
-      this.emitChange(arr);
+
+    /** Intercambia hacia abajo y emite el array completo */
+    moveItemDown(i) {
+      const arr = clone(this.modelValue || [])
+      if (i === arr.length - 1) return
+      ;[arr[i], arr[i+1]] = [arr[i+1], arr[i]]
+      this.emitFieldChange(this.resolvedPrefix, arr)
     },
+
+    /**
+     * Cuando cambia un campo dentro de un array,
+     * EMITE SÓLO esa ruta puntual y el valor.
+     */
+    onChildChange(i, key, val) {
+      this.emitFieldChange(
+        `${this.resolvedPrefix}[${i}].${key}`,
+        val
+      )
+    },
+
+    /** Para objetos anidados */
+    updateNested(key, val) {
+      this.emitFieldChange(
+        `${this.resolvedPrefix}.${key}`,
+        val
+      )
+    },
+
     getBasicFields(children) {
-      return children?.filter(c => c.template !== 'advanced') || [];
+      return (children || []).filter(c => c.template !== 'advanced')
     },
     getAdvancedFields(children) {
-      return children?.filter(c => c.template === 'advanced') || [];
+      return (children || []).filter(c => c.template === 'advanced')
     }
   }
 }
@@ -88,74 +152,128 @@ export default {
 
 <template>
   <div class="p-fluid">
-    <!-- Simple inputs -->
+
+    <!-- 1) Inputs simples -->
     <div v-if="isInputRow" class="input-row mb-4">
-      <label :for="field.key" class="block text-sm font-medium text-gray-700 mb-1">
-        {{ field.label }}<span v-if="field.required" class="text-red-500">*</span>
+      <label :for="resolvedPrefix" class="block text-sm font-medium mb-1">
+        {{ field.label }}
+        <span v-if="field.required" class="text-red-500">*</span>
       </label>
-      <component :is="field.type === 'string' ? 'InputText' :
-          field.type === 'boolean' ? 'Checkbox' :
-            field.type === 'date' ? 'DatePicker' :
-              field.type === 'select' ? 'Select' :
-                field.type === 'number' ? 'InputNumber' :
-                  'InputText'
-        " :modelValue="modelValue" @update:modelValue="emitChange" v-bind="{
-          id: field.key,
-          options: field.options,
-          dateFormat: field.type === 'date' ? 'yy-mm-dd' : undefined,
-          showIcon: field.type === 'date',
-          binary: field.type === 'boolean'
-        }" :disabled="!isFieldEditable" class="w-full" :class="{ 'non-editable': !isFieldEditable }" />
+      <component
+        :is="inputComponent"
+        :modelValue="modelValue"
+        @update:modelValue="val => emitFieldChange(resolvedPrefix, val)"
+        :key="resolvedPrefix"
+        :id="resolvedPrefix"
+        :options="field.options"
+        dateFormat="yy-mm-dd"
+        showIcon
+        binary
+        :disabled="!isFieldEditable"
+        class="w-full p-2"
+      />
     </div>
 
-    <!-- Rich text -->
+    <!-- 2) Richtext -->
     <div v-else-if="field.type === 'richtext'" class="mb-4">
-      <label :for="field.key" class="block text-sm font-medium text-gray-700 mb-1">
-        {{ field.label }}<span v-if="field.required" class="text-red-500">*</span>
+      <label :for="resolvedPrefix" class="block text-sm font-medium mb-1">
+        {{ field.label }}
+        <span v-if="field.required" class="text-red-500">*</span>
       </label>
-      <Textarea :modelValue="modelValue" @update:modelValue="emitChange" :id="field.key" :disabled="!isFieldEditable"
-        class="w-full" :class="{ 'non-editable': !isFieldEditable }" />
+      <Textarea
+        :modelValue="modelValue"
+        @update:modelValue="val => emitFieldChange(resolvedPrefix, val)"
+        :key="resolvedPrefix"
+        :id="resolvedPrefix"
+        :disabled="!isFieldEditable"
+        class="w-full p-2"
+      />
     </div>
 
-    <!-- Array of objects with reorder and remove -->
+    <!-- 3) Array de objetos -->
     <div v-else-if="field.type === 'array' && field.itemType === 'object'">
       <div class="flex justify-between items-center mb-2">
         <h3 class="text-lg font-semibold">{{ field.label }}</h3>
-        <Button icon="pi pi-plus" @click="addItem" :disabled="!editable" />
+        <Button icon="pi pi-plus" @click="addItem" :disabled="!editable"/>
       </div>
 
-      <Fieldset v-for="(item, i) in modelValue" :key="i" :legend="headline(i)" toggleable collapsed class="mb-4">
-        <!-- Basic child fields -->
-        <DynamicField v-for="child in getBasicFields(field.children)" :key="child.key + i" :field="child"
+      <Fieldset
+        v-for="(item, i) in modelValue || []"
+        :key="`${resolvedPrefix}[${i}]`"
+        :legend="headline(i)"
+        toggleable
+        collapsed
+        class="mb-4"
+      >
+        <!-- Campos básicos dentro del array -->
+        <DynamicField
+          v-for="child in getBasicFields(field.children)"
+          :key="`${resolvedPrefix}[${i}].${child.key}`"
+          :prefix="`${resolvedPrefix}[${i}]`"
+          :field="child"
           :modelValue="item[child.key]"
-          @update:modelValue="val => { const arr = [...modelValue]; arr[i] = { ...arr[i], [child.key]: val }; emitChange(arr); }"
-          :editable="editable" />
+          @field-change="emitFieldChange"
+          @update:modelValue="val => onChildChange(i, child.key, val)"
+          :editable="editable"
+        />
 
-        <!-- Advanced child fields -->
-        <Fieldset legend="Opciones avanzadas" toggleable collapsed class="mt-2 mb-2">
-          <DynamicField v-for="child in getAdvancedFields(field.children)" :key="child.key + i + 'adv'" :field="child"
+        <!-- Opciones avanzadas -->
+        <Fieldset
+          v-if="getAdvancedFields(field.children).length"
+          legend="Opciones avanzadas"
+          toggleable
+          collapsed
+          class="mt-2 mb-2"
+        >
+          <DynamicField
+            v-for="child in getAdvancedFields(field.children)"
+            :key="`${resolvedPrefix}[${i}].${child.key}.adv`"
+            :prefix="`${resolvedPrefix}[${i}]`"
+            :field="child"
             :modelValue="item[child.key]"
-            @update:modelValue="val => { const arr = [...modelValue]; arr[i] = { ...arr[i], [child.key]: val }; emitChange(arr); }"
-            :editable="editable" />
+            @field-change="emitFieldChange"
+            @update:modelValue="val => onChildChange(i, child.key, val)"
+            :editable="editable"
+          />
         </Fieldset>
 
-        <!-- Reorder and remove buttons -->
+        <!-- Controles mover/eliminar -->
         <div class="flex gap-2 justify-end mt-2">
-          <Button icon="pi pi-arrow-up" @click="moveItemUp(i)" :disabled="i === 0" size="small" rounded />
-          <Button icon="pi pi-arrow-down" @click="moveItemDown(i)" :disabled="i === modelValue.length - 1" size="small"
-            rounded />
-          <Button icon="pi pi-trash" label="Eliminar ítem" @click="removeItem(i)"
-            :disabled="hasNonEditableChild() || !editable" severity="danger" size="small" />
+          <Button icon="pi pi-arrow-up"
+                  @click="moveItemUp(i)"
+                  :disabled="i === 0"
+                  size="small" rounded/>
+          <Button icon="pi pi-arrow-down"
+                  @click="moveItemDown(i)"
+                  :disabled="i === (modelValue||[]).length - 1"
+                  size="small" rounded/>
+          <Button icon="pi pi-trash"
+                  label="Eliminar ítem"
+                  @click="removeItem(i)"
+                  :disabled="!editable"
+                  severity="danger"
+                  size="small"/>
         </div>
       </Fieldset>
     </div>
 
-    <!-- Nested object -->
-    <div v-else-if="field.type === 'object'">
-      <DynamicField v-for="child in field.children" :key="child.key" :field="child" :modelValue="modelValue[child.key]"
-        @update:modelValue="val => {
-          const obj = { ...modelValue, [child.key]: val }; emitChange(obj);
-        }" :editable="editable" />
+    <!-- 4) Objeto anidado -->
+    <div v-else-if="field.type === 'object'" class="mb-4">
+      <DynamicField
+        v-for="child in field.children"
+        :key="`${resolvedPrefix}.${child.key}`"
+        :prefix="resolvedPrefix"
+        :field="child"
+        :modelValue="modelValue?.[child.key]"
+        @field-change="emitFieldChange"
+        @update:modelValue="val => updateNested(child.key, val)"
+        :editable="editable"
+      />
+    </div>
+
+    <!-- 5) Fallback -->
+    <div v-else class="text-red-500">
+      Tipo de campo “{{ field.type }}” no soportado.
     </div>
   </div>
 </template>
@@ -165,13 +283,13 @@ export default {
   display: flex;
   flex-direction: column;
 }
-
 .mb-4 {
   margin-bottom: 1rem;
 }
-
-.non-editable {
-  background-color: #f5f5f5;
-  cursor: not-allowed;
+.w-full {
+  width: 100%;
+}
+.p-2 {
+  padding: 0.5rem;
 }
 </style>
