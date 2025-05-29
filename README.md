@@ -276,3 +276,7 @@ import { Form, FormField } from '@primevue/forms';
 app.component(Form);
 app.component(FormField);
 ```
+#### 7. Install lodash.set
+```sh
+npm install lodash.set
+```
