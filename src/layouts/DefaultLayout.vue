@@ -47,7 +47,7 @@
   .content {
     /* Limita ancho máximo y centra internamente */
     width: 100%;
-    max-width: 800px;
+    max-width: 100vw;
     padding: 1rem;
     box-sizing: border-box;
   }
