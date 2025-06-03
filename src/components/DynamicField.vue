@@ -218,9 +218,9 @@ export default {
     </div>
 
     <!-- 5) Fallback -->
-    <div v-else class="text-red-500">
+   <!-- <div v-else class="text-red-500">
       Tipo de campo “{{ field.type }}” no soportado.
-    </div>
+    </div>-->
   </div>
 </template>
 
