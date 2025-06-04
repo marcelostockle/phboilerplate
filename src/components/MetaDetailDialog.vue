@@ -5,15 +5,8 @@
     <!-- Dialog principal con ancho fijo y responsivo -->
     <Dialog v-model:visible="visibleProxy" :style="{ minWidth: '30vw', width: '900px', maxWidth: '90vw' }" modal>
       <!-- Imagen tipo banner en la parte superior -->
-      <div
-        v-if="getBannerUrl"
-        class="w-full h-48 overflow-hidden rounded-t-xl mb-4"
-      >
-        <img
-          :src="getBannerUrl"
-          alt="Banner"
-          class="w-full h-full object-cover"
-        />
+      <div v-if="getBannerUrl" class="w-full h-48 overflow-hidden rounded-t-xl mb-4">
+        <img :src="getBannerUrl" alt="Banner" class="w-full h-full object-cover" />
       </div>
 
       <!-- Título del diálogo solo si hay contenido visible -->
@@ -36,8 +29,8 @@
               <div v-if="hasVisibleFields(groups['title-photo'])" class="flex-shrink-0">
                 <template v-for="f in sortedBySorting(groups['title-photo'])" :key="f.key">
                   <div v-if="getValue(f.key)" class="flex flex-col max-w-xs">
-                    <label class="font-semibold text-sm">{{ f.label }}</label>
-                    <img v-if="esImagen(getValue(f.key))" :src="getValue(f.key)" alt="Imagen" class="rounded shadow max-w-full max-h-40 object-contain mt-1" />
+                    <img v-if="esImagen(getValue(f.key))" :src="getValue(f.key)" alt="Imagen"
+                      class="rounded shadow max-w-full max-h-40 object-contain mt-1" />
                     <span v-else class="text-base break-all mt-1">{{ getValue(f.key) }}</span>
                   </div>
                 </template>
@@ -49,13 +42,19 @@
                   <div v-if="hasVisibleFields(groups[block])" class="mb-1">
                     <template v-for="f in sortedBySorting(groups[block])" :key="f.key">
                       <div v-if="getValue(f.key)">
-                        <label class="block text-gray-600 text-xs">{{ f.label }}</label>
-                        <span class="block font-medium text-lg">{{ getValue(f.key) }}</span>
+                        <span class="block font-medium text-lg" :class="{
+                          'text-blue-400 text-xl': block === 'supertitle',
+                          'text-black text-md': block === 'title',
+                          'text-gray-500 text-xs': block === 'subtitle'
+                        }">
+                          {{ getValue(f.key) }}
+                        </span>
                       </div>
                     </template>
                   </div>
                 </template>
               </div>
+
             </div>
           </div>
 
@@ -67,7 +66,8 @@
         </div>
 
         <!-- Sección de campos simples -->
-        <div v-if="hasVisibleFields(groups.fields)" class="grid grid-cols-2 gap-4 mb-4 bg-gray-100 p-4 rounded-lg shadow">
+        <div v-if="hasVisibleFields(groups.fields)"
+          class="grid grid-cols-2 gap-4 mb-4 bg-gray-100 p-4 rounded-lg shadow">
           <template v-for="f in sortedBySorting(groups.fields)" :key="f.key">
             <div v-if="getValue(f.key)" class="flex flex-col">
               <label class="font-semibold text-sm">{{ f.label }}</label>
@@ -88,23 +88,29 @@
           </template>
         </div>
 
-        <!-- Tablas con datos anidados -->
-        <div v-for="f in groups.datatable" :key="f.key" class="mt-6">
-          <label class="font-semibold text-sm mb-2 block">{{ f.label }}</label>
-          <DataTable :value="getValue(f.key)" class="w-full bg-gray-300 rounded-lg shadow">
-            <template v-for="child in sortedBySorting(f.children)" :key="child.key">
-              <Column :field="child.key" :header="child.label">
-                <template #body="slotProps">
-                  <DynamicField :field="child" :model-value="slotProps.data[child.key]" :editable="false" />
-                </template>
-              </Column>
+        <!-- Tablas con datos anidados mejoradas -->
+        <div v-for="f in groups.datatable" :key="f.key" class="mt-8"> 
+          <div class="overflow-x-auto rounded-lg shadow border border-gray-200 bg-white">
+            <DataTable :value="getValue(f.key)" stripedRows class="min-w-[400px]" tableStyle="min-width: 400px" :pt="{
+              table: { class: 'w-full' },
+              header: { class: 'bg-gray-800 font-bold' },  // <-- font-bold para negrita
+              bodyRow: { class: 'hover:bg-blue-50 transition' }
+            }">
+              <template v-for="child in sortedBySorting(f.children)" :key="child.key">
+          <Column :field="child.key" :header="child.label" headerClass="!bg-gray-300 !text-gray-800 font-extrabold border-b-2 border-gray-300">
+            <template #body="slotProps">
+              <span class="block px-2 py-1 text-gray-800">{{ slotProps.data[child.key] }}</span>
             </template>
-          </DataTable>
+          </Column>
+              </template>
+            </DataTable>
+          </div>
         </div>
       </div>
     </Dialog>
   </div>
 </template>
+
 
 <script setup>
 // Importaciones necesarias desde Vue y PrimeVue
