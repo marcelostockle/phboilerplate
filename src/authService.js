@@ -44,7 +44,7 @@ const registerUser = async (email, password) => {
     const user = userCredential.user;
 
     // Crear usuario en Firestore DB
-    dbService.createOrUpdateDocument(['users', userCredential.user.uid], {
+    dbService.createOrUpdateDocument(`users/${userCredential.user.uid}`, {
         email: user.email,
         displayName: user.displayName || "Nuevo usuario",
         createdAt: new Date(),
@@ -87,21 +87,22 @@ const resetPassword = async (email) => {
 // - recaptchaContainerID: Specify the ID of the button that submits your sign-in form
 const startPhoneSignIn = async (phoneNumber, recaptchaContainerId = "recaptcha-container") => {
   const { auth } = await getFirebaseServices();
-  auth.languageCode = "es";
 
   try {
     // Only create reCAPTCHA once
     if (!window.recaptchaVerifier) {
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, recaptchaContainerId, {
+      window.recaptchaVerifier = new RecaptchaVerifier(recaptchaContainerId, {
         size: "invisible",
         callback: (response) => {
           // reCAPTCHA solved
         }
-      });
+      }, auth);
     }
 
     const appVerifier = window.recaptchaVerifier;
+
     confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
+
     return { success: true, message: "Code sent successfully" };
   } catch (error) {
     console.error("Phone sign-in error:", error);
@@ -109,17 +110,7 @@ const startPhoneSignIn = async (phoneNumber, recaptchaContainerId = "recaptcha-c
   }
 };
 
-// Prematurely stop phone sign-in
-// This is useful if the user decides to cancel the sign-in process
-const stopPhoneSignIn = () => {
-  if (window.recaptchaVerifier?.clear) {
-    window.recaptchaVerifier.clear();
-  }
-  confirmationResult = null;
-  window.recaptchaVerifier = null;
-};
-
-const confirmPhoneCode = async (code, userData = {}) => {
+const confirmPhoneCode = async (code) => {
   if (!confirmationResult) {
     return { success: false, message: "No confirmation available" };
   }
@@ -128,10 +119,9 @@ const confirmPhoneCode = async (code, userData = {}) => {
     const result = await confirmationResult.confirm(code);
     const user = result.user;
 
-    await dbService.createOrUpdateDocument(['users', user.uid], {
+    await dbService.createOrUpdateDocument(`users/${user.uid}`, {
       phoneNumber: user.phoneNumber,
-      displayName: userData.displayName || "Nuevo usuario",
-      createdAt: user.metadata.creationTime,
+      createdAt: new Date(),
     });
 
     return { success: true, user, message: "Signed in successfully" };
@@ -146,6 +136,16 @@ const confirmPhoneCode = async (code, userData = {}) => {
     confirmationResult = null;
     window.recaptchaVerifier = null;
   }
+};
+
+// Prematurely stop phone sign-in
+// This is useful if the user decides to cancel the sign-in process
+const stopPhoneSignIn = () => {
+  if (window.recaptchaVerifier?.clear) {
+    window.recaptchaVerifier.clear();
+  }
+  confirmationResult = null;
+  window.recaptchaVerifier = null;
 };
 
 export default {
