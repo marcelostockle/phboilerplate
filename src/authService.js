@@ -5,6 +5,7 @@ import {
   signOut,
   onAuthStateChanged,
   sendPasswordResetEmail,
+  sendEmailVerification,
   signInWithPhoneNumber,
   RecaptchaVerifier
  } from "firebase/auth";
@@ -22,6 +23,7 @@ const initAuthListener = async () => {
   const { auth } = await getFirebaseServices();
   onAuthStateChanged(auth, async (user) => {
     state.isLoggedIn = !!user;
+    state.emailVerified = user?.emailVerified || false;
     if (user) {
       const res = await dbService.fetchDocument('users', user.uid);
       if (res.success) {
@@ -42,6 +44,7 @@ const registerUser = async (email, password) => {
     // Crear usuario en Firebase Auth
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
+    user.sendEmailVerification();
 
     // Crear usuario en Firestore DB
     dbService.createOrUpdateDocument(`users/${userCredential.user.uid}`, {
@@ -72,6 +75,24 @@ const logoutUser = async () => {
   return signOut(auth);
 };
 
+const verifyEmail = async () => {
+  const { auth } = await getFirebaseServices();
+  if (!auth.currentUser) {
+    return { success: false, message: "No user logged in" };
+  }
+  if (auth.currentUser.emailVerified) {
+    return { success: false, message: "Email already verified" };
+  }
+
+  try {
+    await sendEmailVerification(auth.currentUser);
+    return { success: true, message: "Verification email sent!" };
+  } catch (error) {
+    console.error("Email verification error:", error);
+    return { success: false, message: error.code };
+  }
+}
+
 const resetPassword = async (email) => {
   const { auth } = await getFirebaseServices();
   try {
@@ -83,8 +104,6 @@ const resetPassword = async (email) => {
   }
 };
 
-// Phone authentication
-// - recaptchaContainerID: Specify the ID of the button that submits your sign-in form
 const startPhoneSignIn = async (phoneNumber, recaptchaContainerId = "recaptcha-container") => {
   const { auth } = await getFirebaseServices();
 
@@ -153,6 +172,7 @@ export default {
   registerUser,
   loginUser,
   logoutUser,
+  verifyEmail,
   resetPassword,
   startPhoneSignIn,
   stopPhoneSignIn,
