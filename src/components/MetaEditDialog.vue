@@ -3,7 +3,7 @@
     <!-- Toast container -->
     <Toast />
     <!-- Diálogo modal de edición -->
-    <Dialog v-model:visible="visibleProxy" :style="{ minWidth: '30vw' }" modal>
+    <Dialog v-model:visible="visibleProxy" :style="{ minWidth: '30vw', width: '900px', maxWidth: '90vw'  }" modal>
       <template #header>
         <!-- Título del diálogo con el nombre del esquema -->
         <span class="dialog-header">Editar {{ schemaName }}</span>
@@ -14,7 +14,7 @@
         <!-- campos base (no-array, no-advanced) -->
         <div class="flex flex-wrap -mx-2">
           <template v-for="f in formFields" :key="f.key">
-            <div class="px-2 w-full sm:w-1/2 mb-4">
+            <div class="px-2 w-full sm:w-1/2 mb-4 p-2">
               <!-- Campo individual con validación -->
               <FormField :name="f.key" v-slot="{ error }">
                 <DynamicField :field="f" :model-value="formData[f.key]" :editable="f.editable"
@@ -33,7 +33,7 @@
           <label class="font-bold block mb-2">{{ f.label }}</label>
           <!-- Itera cada elemento del array -->
           <div v-for="(item, idx) in formData[f.key]" :key="idx" class="mb-4">
-            <Fieldset :legend="`Ítem ${idx + 1}`" toggleable :collapsed="false" class="p-4 border rounded">
+            <Fieldset :legend="`Ítem ${idx + 1}`" toggleable :collapsed="false" class="p-4 border rounded ">
               <!-- Icono personalizado para el toggle -->
               <template #toggleicon="{ collapsed }">
                 <i :class="collapsed ? 'pi pi-chevron-right' : 'pi pi-chevron-down'"></i>

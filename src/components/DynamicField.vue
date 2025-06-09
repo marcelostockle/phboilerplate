@@ -12,6 +12,8 @@ import {
 import { v4 as uuid } from 'uuid'
 import rfdc from 'rfdc'
 import { defineAsyncComponent } from 'vue'
+import dbService from '@/dbService'
+
 
 // clon profundo robusto
 const clone = rfdc()
@@ -62,7 +64,8 @@ export default {
           : t === 'date' ? 'DatePicker'
             : t === 'select' ? 'Select'
               : t === 'number' ? 'InputNumber'
-                : 'InputText'
+                : t === 'image' ? 'image'
+                  : 'InputText'
     }
   },
 
@@ -145,6 +148,24 @@ export default {
     },
     getAdvancedFields(children) {
       return (children || []).filter(c => c.template === 'advanced')
+    },
+    async onImageChange(e) {
+      const file = e.target.files[0]
+      if (!file) return
+
+      const filePath = `${this.field.key}/${Date.now()}-${file.name}`
+
+      const uploadRes = await dbService.uploadFile(filePath, file)
+      if (uploadRes.success) {
+        const urlRes = await dbService.getFileURL(filePath)
+        if (urlRes.success) {
+          this.emitFieldChange(this.resolvedPrefix, urlRes.url)
+        } else {
+          console.error('[DynamicField] Error al obtener URL:', urlRes.message)
+        }
+      } else {
+        console.error('[DynamicField] Error al subir imagen:', uploadRes.message)
+      }
     }
   }
 }
@@ -218,9 +239,16 @@ export default {
     </div>
 
     <!-- 5) Fallback -->
-   <!-- <div v-else class="text-red-500">
+    <!-- <div v-else class="text-red-500">
       Tipo de campo “{{ field.type }}” no soportado.
     </div>-->
+
+    <!-- 6) Imagen con subida -->
+    <div v-else-if="field.type === 'image'" class="mb-4">
+      <label class="block text-sm font-medium mb-1">{{ field.label }}</label>
+      <input type="file" accept="image/*" @change="onImageChange" class="mb-2" :disabled="!isFieldEditable" />
+      <img v-if="modelValue" :src="modelValue" alt="Vista previa" class="rounded shadow max-h-48 object-cover" />
+    </div>
   </div>
 </template>
 
