@@ -25,36 +25,15 @@ const resolveFirestoreTypes = (data) => {
   return data;
 };
 
-const fetchDocument = async (collectionNameOrRef, docId) => {
-  const { db } = await getFirebaseServices();
-  try {
-    let docRef;
-    if (collectionNameOrRef instanceof DocumentReference) {
-      docRef = collectionNameOrRef;
-    } else if (typeof collectionNameOrRef === "string" && docId) {
-      docRef = doc(db, collectionNameOrRef, docId);
-    } else {
-      throw new Error("Invalid document reference or collection/docId pair");
-    }
-
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      return { success: true, data: { id: docSnap.id, ...resolveFirestoreTypes(docSnap.data()) } };
-    } else {
-      return { success: false, message: "Document not found" };
-    }
-  } catch (error) {
-    console.error("Fetch error:", error);
-    return { success: false, message: error.code };
-  }
-};
-
 const fetchCollection = async (collectionPath) => {
   const { db } = await getFirebaseServices();
   try {
     const colRef = collection(db, ...collectionPath.replace(/^\/+|\/+$/g, '').split('/'));
     const colSnap = await getDocs(colRef);
-    const documents = colSnap.docs.map(doc => ({ id: doc.id, ...resolveFirestoreTypes(doc.data()) }));
+    const documents = colSnap.docs.map(doc => ({
+      id: doc.id,
+      ...resolveFirestoreTypes(doc.data())
+    }));
     return { success: true, data: documents };
   } catch (error) {
     console.error("Fetch collection error:", error);
@@ -96,19 +75,34 @@ async function queryCollection(collectionPath, filters = [], options = {}) {
   }
 }
 
-const createOrUpdateDocument = async (pathArray, data) => {
-  // pathArray:
-  // For top-level collection: ['collectionName', 'docId']
-  // For subcollection: ['parentCollection', 'parentDocId', 'subcollection', 'docId']
-  // For nested subcollections: ['col1', 'doc1', 'col2', 'doc2', 'col3', 'doc3']
+const fetchDocument = async (collectionPath, docId) => {
+  const { db } = await getFirebaseServices();
+  try {
+    const pathArray = collectionPath.replace(/^\/+|\/+$/g, '').split('/');
+    const docRef = doc(db, ...pathArray, docId);
+
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return { success: true, data: { id: docSnap.id, ...resolveFirestoreTypes(docSnap.data()) } };
+    } else {
+      return { success: false, message: "Document not found" };
+    }
+  } catch (error) {
+    console.error("Fetch error:", error);
+    return { success: false, message: error.code };
+  }
+};
+
+const createOrUpdateDocument = async (collectionPath, data) => {
   const { db } = await getFirebaseServices();
   
   try {
     let docRef;
-    const isStringArgs = typeof pathArray === 'string';
+    const pathArray = collectionPath.replace(/^\/+|\/+$/g, '').split('/');
+
     // If path ends with collection (odd length), use addDoc for auto-ID
-    if (isStringArgs || pathArray.length % 2 === 1) {
-      const colRef = isStringArgs ? collection(db, pathArray) : collection(db, ...pathArray);
+    if (pathArray.length % 2 === 1) {
+      const colRef = collection(db, ...pathArray);
       const result = await addDoc(colRef, data);
       return { 
         success: true, 
@@ -136,22 +130,11 @@ const createOrUpdateDocument = async (pathArray, data) => {
   }
 };
 
-const updateDocument = async (collectionName, docId, data) => {
+const deleteDocument = async (collectionPath, docId) => {
   const { db } = await getFirebaseServices();
   try {
-    const docRef = doc(db, collectionName, docId);
-    await updateDoc(docRef, data);
-    return { success: true, message: "Document updated successfully" };
-  } catch (error) {
-    console.error("Update error:", error);
-    return { success: false, message: error.code };
-  }
-};
-
-const deleteDocument = async (collectionName, docId) => {
-  const { db } = await getFirebaseServices();
-  try {
-    const docRef = doc(db, collectionName, docId);
+    const pathArray = collectionPath.replace(/^\/+|\/+$/g, '').split('/');
+    const docRef = doc(db, ...pathArray, docId);
     await deleteDoc(docRef);
     return { success: true, message: "Document deleted successfully" };
   } catch (error) {
@@ -202,7 +185,6 @@ export default {
   fetchCollection,
   queryCollection,
   createOrUpdateDocument,
-  updateDocument,
   deleteDocument,
   uploadFile,
   getFileURL,
