@@ -44,7 +44,7 @@ const registerUser = async (email, password) => {
     // Crear usuario en Firebase Auth
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
-    user.sendEmailVerification();
+    sendEmailVerification(user);
 
     // Crear usuario en Firestore DB
     dbService.createOrUpdateDocument(`users/${userCredential.user.uid}`, {
