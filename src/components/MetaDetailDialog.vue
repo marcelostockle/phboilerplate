@@ -66,15 +66,26 @@
         </div>
 
         <!-- Sección de campos simples -->
-        <div v-if="hasVisibleFields(groups.fields)"
-          class="grid grid-cols-2 gap-4 mb-4 bg-gray-100 p-4 rounded-lg shadow">
-          <template v-for="f in sortedBySorting(groups.fields)" :key="f.key">
-            <div v-if="getValue(f.key)" class="flex flex-col">
-              <label class="font-semibold text-sm">{{ f.label }}</label>
-              <span class="text-base">{{ getValue(f.key) }}</span>
+        <template v-for="f in sortedBySorting(groups.fields)" :key="f.key">
+          <div v-if="getValue(f.key)" class="flex flex-col gap-1">
+            <label class="font-semibold text-sm">{{ f.label }}</label>
+
+            <!-- Si es campo tipo user -->
+            <div v-if="f.type === 'user'" class="flex items-center gap-2">
+              <img :src="getValue(f.key)?.photoURL || 'https://via.placeholder.com/40'" alt="avatar"
+                class="w-8 h-8 rounded-full object-cover" />
+              <span class="text-base">
+                {{ getValue(f.key)?.name || 'Sin nombre' }}
+              </span>
             </div>
-          </template>
-        </div>
+
+            <!-- Para cualquier otro tipo -->
+            <span v-else class="text-base break-words">
+              {{ getValue(f.key) }}
+            </span>
+          </div>
+        </template>
+
 
         <!-- Sección de contenido enriquecido (rich text) -->
         <div v-if="hasVisibleFields(groups.body)" class="space-y-2 mb-4">
@@ -89,7 +100,7 @@
         </div>
 
         <!-- Tablas con datos anidados mejoradas -->
-        <div v-for="f in groups.datatable" :key="f.key" class="mt-8"> 
+        <div v-for="f in groups.datatable" :key="f.key" class="mt-8">
           <div class="overflow-x-auto rounded-lg shadow border border-gray-200 bg-white">
             <DataTable :value="getValue(f.key)" stripedRows class="min-w-[400px]" tableStyle="min-width: 400px" :pt="{
               table: { class: 'w-full' },
@@ -97,11 +108,12 @@
               bodyRow: { class: 'hover:bg-blue-50 transition' }
             }">
               <template v-for="child in sortedBySorting(f.children)" :key="child.key">
-          <Column :field="child.key" :header="child.label" headerClass="!bg-gray-300 !text-gray-800 font-extrabold border-b-2 border-gray-300">
-            <template #body="slotProps">
-              <span class="block px-2 py-1 text-gray-800">{{ slotProps.data[child.key] }}</span>
-            </template>
-          </Column>
+                <Column :field="child.key" :header="child.label"
+                  headerClass="!bg-gray-300 !text-gray-800 font-extrabold border-b-2 border-gray-300">
+                  <template #body="slotProps">
+                    <span class="block px-2 py-1 text-gray-800">{{ slotProps.data[child.key] }}</span>
+                  </template>
+                </Column>
               </template>
             </DataTable>
           </div>

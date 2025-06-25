@@ -33,6 +33,12 @@ export default {
     DynamicField: defineAsyncComponent(() => import('./DynamicField.vue'))
   },
 
+  data() {
+    return {
+      userOptions: []
+    }
+  },
+
   props: {
     field: { type: Object, required: true },
     modelValue: { type: [String, Number, Boolean, Date, Array, Object], default: null },
@@ -65,7 +71,8 @@ export default {
             : t === 'select' ? 'Select'
               : t === 'number' ? 'InputNumber'
                 : t === 'image' ? 'image'
-                  : 'InputText'
+                  : t === 'user' ? 'userSelector'
+                    : 'InputText'
     }
   },
 
@@ -167,6 +174,19 @@ export default {
         console.error('[DynamicField] Error al subir imagen:', uploadRes.message)
       }
     }
+  },
+  async mounted() {
+    if (this.field.type === 'user') {
+      const res = await dbService.fetchCollection('users')
+      if (res.success) {
+        const keys = this.field.options.map(o => o.key)
+        this.userOptions = res.data.map(user => {
+          const u = {}
+          keys.forEach(k => u[k] = user[k])
+          return u
+        })
+      }
+    }
   }
 }
 </script>
@@ -248,6 +268,31 @@ export default {
       <label class="block text-sm font-medium mb-1">{{ field.label }}</label>
       <input type="file" accept="image/*" @change="onImageChange" class="mb-2" :disabled="!isFieldEditable" />
       <img v-if="modelValue" :src="modelValue" alt="Vista previa" class="rounded shadow max-h-48 object-cover" />
+    </div>
+    <!-- Selector de usuario con foto + nombre -->
+    <div v-else-if="field.type === 'user'" class="mb-4">
+      <label class="block text-sm font-medium mb-1">
+        {{ field.label }}
+        <span v-if="field.required" class="text-red-500">*</span>
+      </label>
+      <Dropdown :modelValue="modelValue" @update:modelValue="val => emitFieldChange(resolvedPrefix, val)"
+        :options="userOptions" optionLabel="name" optionValue="id" :filter="true" :disabled="!isFieldEditable"
+        placeholder="Seleccionar usuario" class="w-full">
+        <template #value="slotProps">
+          <div v-if="slotProps.value" class="flex items-center gap-2">
+            <img :src="slotProps.value.photoURL" class="w-6 h-6 rounded-full" alt="avatar" />
+            <span>{{ slotProps.value.name }}</span>
+          </div>
+          <span v-else class="text-gray-400">Seleccionar usuario</span>
+        </template>
+
+        <template #option="slotProps">
+          <div class="flex items-center gap-2">
+            <img :src="slotProps.option.photoURL" class="w-6 h-6 rounded-full" alt="avatar" />
+            <span>{{ slotProps.option.name }}</span>
+          </div>
+        </template>
+      </Dropdown>
     </div>
   </div>
 </template>

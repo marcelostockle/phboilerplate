@@ -190,26 +190,6 @@ export function setupPrimeVue(app) {
 ```sh
 npm install vue3-apexcharts apexcharts --save
 ```
-### Installando Taiwing con primevue css
-```sh
-npm install -D tailwindcss postcss autoprefixer
-```
-#### Se configura tailwind.config.js
-```sh
-// tailwind.config.js
-export default {
-  content: [
-    "./index.html",
-    "./src/**/*.{vue,js,ts,jsx,tsx}",
-    "./node_modules/@primevue/**/*.{js,vue}", // Añadir PrimeVue
-    "./node_modules/@primeuix/**/*.{js,vue}", // Añadir PrimeUIX para temas como Aura
-  ],
-  theme: {
-    extend: {},
-  },
-  plugins: [],
-}
-```
 ## TaildWind CSS
 #### 1. Instalar dependencias necesarias:
 ```sh
@@ -267,7 +247,7 @@ Esto le indica a Node que debe interpretar ese archivo como CommonJS, lo cual es
 ```
 #### 6. Install Forms
 ```sh
-npm install primevue @primevue/form
+npm install @primevue/forms
 ```
 ### agregar a main.js
 ```sh
@@ -279,4 +259,8 @@ app.component(FormField);
 #### 7. Install lodash.set
 ```sh
 npm install lodash.set
+```
+#### 8. validacion con Zod
+```sh
+npm install zod
 ```
