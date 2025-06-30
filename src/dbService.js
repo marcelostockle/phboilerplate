@@ -143,12 +143,27 @@ const deleteDocument = async (collectionPath, docId) => {
   }
 };
 
-const uploadFile = async (filePath, file) => {
+const uploadFile = async (filePath, file, autofilename = true) => {
+  if (!file || !(file instanceof File)) {
+    return { success: false, message: "Invalid file" };
+  }
+  if (!filePath || typeof filePath !== "string") {
+    return { success: false, message: "Invalid file path" };
+  }
+
+  // If autofilename is true, generate a unique filename
+  let finalPath = filePath;
+  if (autofilename) {
+    const timestamp = Date.now();
+    const fileExtension = file.name.split('.').pop();
+    finalPath = `${filePath}/${timestamp}.${fileExtension}`;
+  }
   const storage = getStorage();
   try {
-    const fileRef = ref(storage, filePath);
+    console.log("Uploading file to:", finalPath);
+    const fileRef = ref(storage, finalPath);
     await uploadBytes(fileRef, file);
-    return { success: true, message: "File uploaded successfully" };
+    return { success: true, filepath: finalPath, message: "File uploaded successfully" };
   } catch (error) {
     console.error("File upload error:", error);
     return { success: false, message: error.code };

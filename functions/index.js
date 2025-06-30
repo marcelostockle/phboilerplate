@@ -30,3 +30,6 @@ exports.getFirebaseConfig = functions.
 });
 const { callLLM } = require('./llm-function/callLLM');
 exports.callLLM = callLLM;
+
+const { sendNotification } = require("./notification/sendNotification");
+exports.sendNotification = sendNotification;

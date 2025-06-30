@@ -190,26 +190,6 @@ export function setupPrimeVue(app) {
 ```sh
 npm install vue3-apexcharts apexcharts --save
 ```
-### Installando Taiwing con primevue css
-```sh
-npm install -D tailwindcss postcss autoprefixer
-```
-#### Se configura tailwind.config.js
-```sh
-// tailwind.config.js
-export default {
-  content: [
-    "./index.html",
-    "./src/**/*.{vue,js,ts,jsx,tsx}",
-    "./node_modules/@primevue/**/*.{js,vue}", // Añadir PrimeVue
-    "./node_modules/@primeuix/**/*.{js,vue}", // Añadir PrimeUIX para temas como Aura
-  ],
-  theme: {
-    extend: {},
-  },
-  plugins: [],
-}
-```
 ## TaildWind CSS
 #### 1. Instalar dependencias necesarias:
 ```sh
@@ -267,7 +247,7 @@ Esto le indica a Node que debe interpretar ese archivo como CommonJS, lo cual es
 ```
 #### 6. Install Forms
 ```sh
-npm install primevue @primevue/form
+npm install @primevue/forms
 ```
 ### agregar a main.js
 ```sh
@@ -280,3 +260,258 @@ app.component(FormField);
 ```sh
 npm install lodash.set
 ```
+#### 8. validacion con Zod
+```sh
+npm install zod
+```
+#### 9. Notification
+# 📲 Notificaciones Push Web con Firebase Cloud Messaging (FCM) y Vue
+
+Este README documenta el **paso a paso completo** para habilitar, guardar y enviar notificaciones push web en un proyecto Vue usando Firebase y Cloud Functions. Incluye ejemplos de código, estructura de Firestore, y troubleshooting para el equipo de desarrollo.
+
+---
+
+## Tabla de Contenidos
+
+- [Resumen del Flujo](#resumen-del-flujo)
+- [Archivos y Servicios Utilizados](#archivos-y-servicios-utilizados)
+- [Estructura en Firestore](#estructura-en-firestore)
+- [Configuración de Variables de Entorno](#configuración-de-variables-de-entorno)
+- [Implementación Paso a Paso](#implementación-paso-a-paso)
+- [Fragmentos de Código Relevantes](#fragmentos-de-código-relevantes)
+- [Cloud Function: sendNotification](#cloud-function-sendnotification)
+- [Cómo probar el envío de notificaciones](#cómo-probar-el-envío-de-notificaciones)
+- [Requisitos previos y notas](#requisitos-previos-y-notas)
+- [Troubleshooting](#troubleshooting)
+- [Notas de Seguridad](#notas-de-seguridad)
+
+---
+
+## Resumen del Flujo
+
+1. **El usuario activa las notificaciones:**
+   - Se solicita permiso en el navegador.
+   - Se obtiene el token FCM con la VAPID Key.
+   - El token se guarda en Firestore bajo `/users/<userId>/tokens/<token>`.
+2. **El usuario desactiva las notificaciones:**
+   - El token se elimina de Firestore y (opcionalmente) de FCM.
+3. **Un backend (Cloud Function) envía una notificación:**
+   - Se consulta Firestore para obtener los tokens activos del usuario.
+   - Se envía la notificación a esos tokens usando Firebase Admin SDK.
+
+---
+
+## Archivos y Servicios Utilizados
+
+### Frontend
+
+- `notificationService.js`: Servicio para gestionar permisos, obtener/guardar/eliminar token y enviar notificaciones.
+- `SideBarMenu.vue`: Botón campanita para activar/desactivar notificaciones.
+- `.env`: Variables de entorno (incluye VAPID Key).
+- `firebase-messaging-sw.js`: Service Worker de FCM para web.
+- `firebase.js`: Inicialización de Firebase en el proyecto.
+
+### Backend
+
+- `sendNotification.js`: Cloud Function para enviar notificaciones usando tokens de Firestore.
+
+---
+
+## Estructura en Firestore
+
+```plaintext
+users
+ └─ <userId>
+     └─ tokens
+          └─ <token>
+               ├─ token: "string"
+               └─ createdAt: <timestamp>
+```
+
+Cada usuario puede tener uno o varios tokens (por navegador o dispositivo).
+
+---
+
+## Configuración de Variables de Entorno
+
+En tu `.env` (usa `VITE_` si usas Vite, o `VUE_APP_` en Vue CLI):
+
+```env
+VITE_FIREBASE_VAPID_KEY=TU_VAPID_KEY_DE_FIREBASE
+VUE_APP_FIREBASE_API_KEY=...
+VUE_APP_FIREBASE_AUTH_DOMAIN=...
+VUE_APP_FIREBASE_PROJECT_ID=...
+VUE_APP_FIREBASE_STORAGE_BUCKET=...
+VUE_APP_FIREBASE_MESSAGING_SENDER_ID=...
+VUE_APP_FIREBASE_APP_ID=...
+VUE_APP_FIREBASE_MEASUREMENT_ID=...
+```
+
+La VAPID Key se encuentra en Firebase Console → Project Settings → Cloud Messaging.
+
+---
+
+## Implementación Paso a Paso
+
+### 1. **Registrar Service Worker**
+
+Asegúrate de registrar `firebase-messaging-sw.js` en tu `main.js`:
+
+```js
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/firebase-messaging-sw.js')
+    .then(reg => console.log('Service Worker registrado correctamente'))
+    .catch(err => console.error('Error registrando Service Worker:', err));
+}
+```
+
+### 2. **Solicitar permiso y guardar el token**
+
+Desde un botón en la UI, llama a `notificationService.requestPermissionAndSaveToken()`. Esto pide permiso, obtiene el token y lo guarda en Firestore bajo el usuario autenticado.
+
+### 3. **Eliminar el token (desactivar notificaciones)**
+
+Cuando el usuario desactive las notificaciones (campanita), llama a `notificationService.deleteCurrentUserToken()`. Esto elimina el token en Firestore.
+
+### 4. **Enviar una notificación desde el backend**
+
+Haz un POST a la Cloud Function con el `userId` y el mensaje.
+
+```http
+POST https://southamerica-east1-hexbd-4ee52.cloudfunctions.net/sendNotification
+Content-Type: application/json
+
+{
+  "userId": "<userId>",
+  "title": "Título de la notificación",
+  "body": "Mensaje para mostrar"
+}
+```
+
+---
+
+## Fragmentos de Código Relevantes
+
+### notificationService.js (extracto)
+
+```js
+export const requestPermissionAndSaveToken = async () => {
+  const permission = await Notification.requestPermission();
+  if (permission !== 'granted') throw new Error('Permiso de notificaciones denegado');
+  const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY;
+  const registration = await navigator.serviceWorker.ready;
+  const { app } = await getFirebaseServices();
+  const messaging = getMessaging(app);
+  const token = await getToken(messaging, { vapidKey, serviceWorkerRegistration: registration });
+  // Guarda el token en Firestore bajo users/<userId>/tokens/<token>
+  // ...
+  return token;
+}
+
+export const deleteCurrentUserToken = async () => {
+  // Obtiene el token actual y lo elimina de Firestore
+  // ...
+}
+```
+
+### SideBarMenu.vue (fragmento relevante)
+
+```vue
+<template>
+  <button @click="toggleNotifications">
+    <i :class="notificationsEnabled ? 'pi pi-bell' : 'pi pi-bell-slash'"></i>
+  </button>
+</template>
+
+<script>
+methods: {
+  async toggleNotifications() {
+    if (!this.notificationsEnabled) {
+      await notificationService.requestPermissionAndSaveToken();
+      this.notificationsEnabled = true;
+      localStorage.setItem('notificationsEnabled', 'true');
+    } else {
+      await notificationService.deleteCurrentUserToken();
+      this.notificationsEnabled = false;
+      localStorage.setItem('notificationsEnabled', 'false');
+    }
+  },
+}
+</script>
+```
+
+---
+
+## Cloud Function: sendNotification
+
+```js
+const functions = require('firebase-functions/v2');
+const admin = require('firebase-admin');
+const cors = require('cors');
+if (!admin.apps.length) admin.initializeApp();
+exports.sendNotification = functions.https.onRequest({ region: 'southamerica-east1' }, async (req, res) => {
+  // ... validaciones y CORS
+  const { userId, title, body } = req.body;
+  const tokenSnap = await admin.firestore().collection('users').doc(userId).collection('tokens').get();
+  const tokens = tokenSnap.docs.map(d => d.data().token).filter(Boolean);
+  const messaging = admin.messaging();
+  const message = { notification: { title, body }, tokens };
+  const response = await messaging.sendMulticast(message);
+  res.json({ success: true, messageCount: response.successCount, failureCount: response.failureCount });
+});
+```
+
+---
+
+## Cómo probar el envío de notificaciones
+
+1. **Asegúrate de tener un usuario autenticado y con token guardado en Firestore** en `/users/<userId>/tokens/<token>`.
+2. **Usa Postman o cURL** para llamar a la función:
+
+```http
+POST https://southamerica-east1-hexbd-4ee52.cloudfunctions.net/sendNotification
+Content-Type: application/json
+{
+  "userId": "8J4zDrQkExbasBzh2Na2ODHsAHX2",
+  "title": "Notificación de Prueba",
+  "body": "¿Ves esto en tu navegador? ¡Todo está bien!"
+}
+```
+
+3. **Verifica en tu navegador** que la notificación aparece, incluso si la web no está abierta (mientras tenga Service Worker activo).
+4. **Revisa Firestore** para ver si el token está creado y actualizado.
+
+---
+
+## Requisitos previos y notas
+
+- El proyecto debe tener habilitada la API de Firebase Cloud Messaging en Google Cloud Console.
+- La cuenta de servicio de las funciones debe tener permisos para FCM.
+- La VAPID Key debe estar bien configurada.
+- El Project ID debe ser el mismo en Firebase y en la Cloud Function.
+- El Service Worker debe estar bien registrado.
+
+---
+
+## Troubleshooting
+
+- **No recibo notificaciones:**
+  - Verifica permisos del navegador y el estado del token en Firestore.
+  - Asegúrate de que la función Cloud Function está corriendo y el endpoint responde.
+  - Consulta los logs con: `firebase functions:log --only sendNotification`
+- **Error 404 **``**:**
+  - Revisa la versión del SDK de `firebase-admin` y la compatibilidad del método `sendMulticast`.
+  - Asegúrate de tener la versión adecuada en `package.json` y que el token esté correcto (string, no array vacío).
+- **No hay token guardado:**
+  - El usuario debe dar permiso en el navegador y tener un usuario autenticado para asociar el token.
+
+---
+
+## Notas de Seguridad
+
+- Nunca expongas la VAPID Key ni los tokens FCM fuera del flujo autenticado.
+- Protege el endpoint de la función con autenticación en producción.
+- Borra los tokens en Firestore cuando el usuario cierre sesión o desactive notificaciones.
+- Usa HTTPS en producción.
+
+---
