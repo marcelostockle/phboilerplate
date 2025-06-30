@@ -167,6 +167,25 @@ const stopPhoneSignIn = () => {
   window.recaptchaVerifier = null;
 };
 
+const refreshUserData = async () => {
+  const { auth } = await getFirebaseServices();
+  if (!auth.currentUser) {
+    return { success: false, message: "No user logged in" };
+  }
+  try {
+    const user = auth.currentUser;
+    let res = await dbService.fetchDocument('users', user.uid);
+    if (res.success) {
+      state.user = res.data;
+      return { success: true, user: state.user, message: "User data refreshed" };
+    } else {
+      return { success: false, message: "Failed to fetch user data" };
+    }
+  } catch (error) {
+    console.error("Error refreshing user data:", error);
+  }
+}
+
 export default {
   state: readonly(state),
   registerUser,
@@ -177,4 +196,5 @@ export default {
   startPhoneSignIn,
   stopPhoneSignIn,
   confirmPhoneCode,
+  refreshUserData,
 };

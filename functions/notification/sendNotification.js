@@ -23,21 +23,17 @@ exports.sendNotification = functions.https.onRequest({ region: 'southamerica-eas
     });
   });
 
-  if (req.method === 'OPTIONS') {
-    return res.status(204).send('');
-  }
+  if (req.method === 'OPTIONS') return res.status(204).send('');
+  if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
 
-  if (req.method !== 'POST') {
-    return res.status(405).send('Method Not Allowed');
-  }
-
-  const { userId, title, body } = req.body;
+  // También acepta 'categoria' (opcional)
+  const { userId, title, body, categoria = 'general' } = req.body;
   if (!userId || !title || !body) {
     return res.status(400).send('Missing parameters');
   }
 
   try {
-    // Obtén los tokens del usuario desde Firestore
+    // 1. Obtén los tokens del usuario desde Firestore
     const tokenSnap = await admin.firestore()
       .collection('users')
       .doc(userId)
@@ -55,30 +51,53 @@ exports.sendNotification = functions.https.onRequest({ region: 'southamerica-eas
     let successCount = 0;
     let failureCount = 0;
 
-    // ENVÍA LA NOTIFICACIÓN A CADA TOKEN (WEB)
+    // 2. Envía la notificación a cada token
     for (const token of tokens) {
+      let responseObj = null;
       try {
         const response = await messaging.send({
           token,
           notification: { title, body },
           webpush: {
-            notification: {
-              title,
-              body,
-            }
+            notification: { title, body }
           }
         });
-        console.log('Enviado con éxito a:', token, response);
+        responseObj = response;
         results.push({ token, success: true, response });
+
+        // 3. Guarda la notificación como "no leída" en la subcolección (éxito)
+        await admin.firestore()
+          .collection('users')
+          .doc(userId)
+          .collection('notifications')
+          .add({
+            estado: false, // No leída
+            contenido: { title, body, response }, // Info completa
+            categoria,
+            fechaEnviado: admin.firestore.FieldValue.serverTimestamp(),
+          });
+
         successCount++;
       } catch (err) {
-        console.error('Error enviando a:', token, err.message || err);
         results.push({ token, success: false, error: err.message || err });
+
+        // También guarda un registro de intento fallido (opcional)
+        await admin.firestore()
+          .collection('users')
+          .doc(userId)
+          .collection('notifications')
+          .add({
+            estado: false, // No leída
+            contenido: { title, body, error: err.message || err },
+            categoria,
+            fechaEnviado: admin.firestore.FieldValue.serverTimestamp(),
+          });
+
         failureCount++;
       }
     }
 
-    // Devuelve los resultados detallados
+    // 4. Devuelve los resultados detallados
     return res.json({
       success: true,
       results,
@@ -87,7 +106,6 @@ exports.sendNotification = functions.https.onRequest({ region: 'southamerica-eas
     });
 
   } catch (error) {
-    console.error('Error general:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
